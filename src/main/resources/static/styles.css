@@ -141,6 +141,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 
 /* result cards */
 .results{display:flex;flex-direction:column;gap:16px}
+#napCards{display:contents}
 .rcard{position:relative;overflow:hidden;border-radius:var(--r);padding:22px 24px;
   border:1px solid var(--stroke);transition:transform .25s,box-shadow .25s,border-color .25s}
 .rcard::after{content:'';position:absolute;top:-40%;right:-10%;width:55%;height:160%;

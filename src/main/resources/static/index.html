@@ -127,12 +127,7 @@
         <div class="err-banner" id="errBanner"><span id="errText"></span></div>
 
         <div class="results" id="results">
-          <div class="rcard nap">
-            <svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="26" r="13" fill="#8fe3c6" opacity=".25"/><path d="M18 24h12M18 28h8" stroke="#bdf0db" stroke-width="2.5" stroke-linecap="round"/><text x="30" y="16" fill="#bdf0db" font-size="11" font-family="Fraunces">z</text></svg>
-            <div class="rlabel">☀️ Засыпание на первый дневной сон</div>
-            <div class="rtime" id="napTime">13:00</div>
-            <div class="rmeta" id="napMeta"></div>
-          </div>
+          <div id="napCards"></div>
           <div class="rcard night">
             <svg class="ricon" viewBox="0 0 48 48" fill="none"><path d="M30 12a15 15 0 1 0 7 23 12 12 0 1 1-7-23Z" fill="#d8ccff"/></svg>
             <div class="rlabel">🌙 Рекомендуемое засыпание в ночь</div>
@@ -332,10 +327,22 @@ function calc(){
   const lastEnd=naps[naps.length-1].e;
   ok();
 
-  // Рекомендации
-  const recFirst=mw+fwM;                 // первый сон по ползунку первого окна
-  const recNight=mw+whM+napTotal;        // чтобы общее бодрствование = план
-  const effNight=(an!=null)?an:recNight; // что рисуем на таймлайне
+  // Рекомендации — оба ползунка перестраивают график по окнам бодрствования
+  // (всего N+1 окон: утро→сон1, между снами, последний сон→ночь). Связка взвешенная:
+  // первый сон в основном от «времени между снами», ночь — от «общего бодрствования»,
+  // при этом второй ползунок тоже влияет, но слабее (вес DOM/SEC).
+  const N=naps.length, DOM=.75, SEC=.25;
+  const recFirst=mw+(DOM*fwM+SEC*whM/(N+1));               // первый сон: окно бодрствования
+  const recNight=mw+napTotal+(DOM*whM+SEC*(N+1)*fwM);      // ночь: дневной сон + бюджет бодрствования
+
+  // расписание рекомендованных снов: окно бодрствования между снами = план (fw)
+  const recNaps=[]; for(let i=0,t=recFirst;i<N;i++){const d=naps[i].e-naps[i].s;recNaps.push({s:t,e:t+d});t=t+d+fwM;}
+  if(recNight>=mw+1440 || recNaps[N-1].e>=recNight){
+    err('Расчёт выходит за пределы суток (24 ч). Уменьшите окно бодрствования, длительность или число снов.');
+    drawTimeline(null);return;
+  }
+
+  const effNight=(an!=null)?an:recNight;                  // что рисуем на таймлайне
   let effNightAbs=effNight; if(effNightAbs<=lastEnd) effNightAbs+=1440;
 
   const firstWindowM=naps[0].s-mw;
@@ -346,13 +353,18 @@ function calc(){
   let actWakeM=null;
   if(an!=null){ let anAbs=an; if(anAbs<=lastEnd) anAbs+=1440; actWakeM=(anAbs-mw)-napTotal; }
 
-  document.getElementById('napTime').textContent=m2t(recFirst);
   document.getElementById('nightTime').textContent=m2t(recNight);
 
-  const fd=naps[0].s-recFirst;
-  document.getElementById('napMeta').textContent =
-    fd===0?`Факт совпадает с рекомендацией (${m2t(naps[0].s)})`
-    :`Рекоменд.: ${m2t(recFirst)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`;
+  const napSvg='<svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="26" r="13" fill="#8fe3c6" opacity=".25"/><path d="M18 24h12M18 28h8" stroke="#bdf0db" stroke-width="2.5" stroke-linecap="round"/></svg>';
+  const ord=['первый','второй','третий','четвёртый'];
+  document.getElementById('napCards').innerHTML=recNaps.map((rn,i)=>{
+    const fd=naps[i].s-rn.s;
+    const meta=fd===0?`Факт совпадает с рекомендацией (${m2t(naps[i].s)})`
+      :`Рекоменд.: ${m2t(rn.s)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`;
+    const label=N>1?`☀️ Засыпание на ${ord[i]} дневной сон`:'☀️ Засыпание на дневной сон';
+    return `<div class="rcard nap">${napSvg}<div class="rlabel">${label}</div><div class="rtime">${m2t(rn.s)}</div><div class="rmeta">${meta}</div></div>`;
+  }).join('');
+
   document.getElementById('nightMeta').textContent =
     `${naps.length} ${napWord(naps.length)} · Σ сна ${fh(napTotal)} · вечернее окно ${fh(recNight-lastEnd)}`;
 
