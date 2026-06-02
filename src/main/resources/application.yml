@@ -1,0 +1,31 @@
+server:
+  port: ${PORT:8080}
+  servlet:
+    session:
+      timeout: 30d
+      cookie:
+        http-only: true
+        same-site: lax
+        # за HTTPS на проде выставьте SESSION_COOKIE_SECURE=true
+        secure: ${SESSION_COOKIE_SECURE:false}
+
+spring:
+  datasource:
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/sleepplanner}
+    username: ${JDBC_DATABASE_USERNAME:sleep}
+    password: ${JDBC_DATABASE_PASSWORD:sleep}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # update — авто-создание/обновление схемы для удобства запуска.
+      # На проде рекомендуется validate + миграции (Flyway/Liquibase).
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    open-in-view: false
+
+logging:
+  level:
+    org.hibernate.SQL: warn

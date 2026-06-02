@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Планировщик детского сна</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night-0:#0e0a24; --night-1:#171138; --night-2:#241a52;
+    --plum:#352a6b; --lav:#b9a7f0; --lav-soft:#d8ccff;
+    --peach:#ffc9a3; --gold:#ffd98e; --mint:#8fe3c6; --mint-deep:#3fae8c;
+    --rose:#f4a6c4;
+    --ink:#f3efff; --muted:#a99fce; --faint:#6c6396;
+    --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.09);
+    --stroke:rgba(184,167,240,.18); --stroke-2:rgba(184,167,240,.34);
+    --r:18px; --r-sm:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  html{background:#15112e}
+  body{
+    font-family:'Outfit',sans-serif;color:var(--ink);
+    background:
+      radial-gradient(1100px 600px at 50% 0%, rgba(185,167,240,.10), transparent 60%),
+      #15112e;
+    background-attachment:fixed;
+    min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;
+  }
+  .stars{position:fixed;inset:0;pointer-events:none;z-index:0}
+  .star{position:absolute;background:#fff;border-radius:50%;opacity:.5;animation:tw 4s ease-in-out infinite}
+  @keyframes tw{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:.9;transform:scale(1.15)}}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:28px 22px 80px}
+
+  /* ---------- top bar ---------- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:30px}
+  .brand{display:flex;align-items:center;gap:13px}
+  .logo{width:46px;height:46px;flex:none}
+  .brand h1{font-family:'Fraunces',serif;font-weight:500;font-size:23px;letter-spacing:.2px;line-height:1}
+  .brand span{font-size:12.5px;color:var(--muted);letter-spacing:.3px}
+  .who{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--muted)}
+  .who b{color:var(--ink);font-weight:500}
+  .btn{font-family:inherit;cursor:pointer;border:none;border-radius:999px;transition:.22s;font-size:14px}
+  .btn-ghost{background:var(--glass);border:1px solid var(--stroke);color:var(--ink);padding:9px 17px}
+  .btn-ghost:hover{background:var(--glass-2);border-color:var(--stroke-2)}
+  .btn-primary{background:linear-gradient(110deg,var(--lav),var(--rose));color:#1a1233;font-weight:600;padding:12px 22px;box-shadow:0 10px 30px -12px rgba(185,167,240,.7)}
+  .btn-primary:hover{filter:brightness(1.06);transform:translateY(-1px)}
+  .btn-primary:active{transform:translateY(0)}
+
+  /* ---------- auth ---------- */
+  .auth-stage{min-height:74vh;display:flex;align-items:center;justify-content:center}
+  .auth-card{width:100%;max-width:430px;background:var(--glass);backdrop-filter:blur(22px);
+    border:1px solid var(--stroke);border-radius:26px;padding:38px 34px;
+    box-shadow:0 40px 90px -40px rgba(0,0,0,.7)}
+  .auth-moon{width:84px;height:84px;margin:0 auto 18px;display:block}
+  .auth-card h2{font-family:'Fraunces',serif;font-weight:500;font-size:27px;text-align:center;margin-bottom:6px}
+  .auth-card .sub{text-align:center;color:var(--muted);font-size:14px;margin-bottom:26px;line-height:1.5}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;letter-spacing:.3px}
+  .field input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--stroke);
+    border-radius:13px;padding:13px 15px;color:var(--ink);font-family:inherit;font-size:15px;transition:.2s}
+  .field input:focus{outline:none;border-color:var(--lav);background:rgba(185,167,240,.08);
+    box-shadow:0 0 0 4px rgba(185,167,240,.12)}
+  .field input::placeholder{color:var(--faint)}
+  .auth-card .btn-primary{width:100%;margin-top:6px}
+  .switcher{text-align:center;margin-top:20px;font-size:13.5px;color:var(--muted)}
+  .switcher a{color:var(--lav);cursor:pointer;font-weight:500}
+  .switcher a:hover{text-decoration:underline}
+  .note{font-size:11.5px;color:var(--faint);text-align:center;margin-top:18px;line-height:1.5}
+  .msg{font-size:13px;text-align:center;margin-top:14px;min-height:18px;transition:.2s}
+  .msg.err{color:#ff9bb0}.msg.ok{color:var(--mint)}
+
+  /* ---------- app layout ---------- */
+  #app{display:none}
+  .grid{display:grid;grid-template-columns:1fr 1.25fr;gap:22px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--stroke);
+    border-radius:var(--r);padding:26px 24px;box-shadow:0 30px 70px -45px rgba(0,0,0,.65)}
+  .panel h3{font-family:'Fraunces',serif;font-weight:500;font-size:19px;margin-bottom:4px;display:flex;align-items:center;gap:9px}
+  .panel .ph-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
+
+  .inrow{display:flex;gap:14px;margin-bottom:16px}
+  .inrow .field{flex:1;margin:0}
+  .field-hint{font-size:11px;color:var(--faint);margin-top:5px}
+  input[type=time]{color-scheme:dark}
+  select{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--stroke);border-radius:13px;
+    padding:13px 15px;color:var(--ink);font-family:inherit;font-size:15px;cursor:pointer;color-scheme:dark;transition:.2s}
+  select:focus{outline:none;border-color:var(--lav);box-shadow:0 0 0 4px rgba(185,167,240,.12)}
+  select option{background:#1c1540;color:var(--ink)}
+  .opt{color:var(--faint);font-size:11px;font-weight:400}
+  .nap-row{display:flex;align-items:flex-end;gap:11px;background:rgba(255,255,255,.03);border:1px solid var(--stroke);
+    border-radius:14px;padding:12px 13px;margin-bottom:11px}
+  .nap-row .nap-badge{flex:none;align-self:center;font-family:'Fraunces',serif;font-size:13px;color:var(--mint);
+    background:rgba(143,227,198,.12);border:1px solid rgba(143,227,198,.25);border-radius:9px;padding:7px 10px;white-space:nowrap}
+  .nap-row .field{flex:1;margin:0}
+  .nap-row .field label{font-size:11.5px}
+  /* range */
+  .slider-field{margin-bottom:18px}
+  .slider-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
+  .slider-top .val{font-family:'Fraunces',serif;font-size:21px;color:var(--lav-soft)}
+  input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:999px;
+    background:linear-gradient(90deg,var(--lav),var(--rose));outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+    background:#fff;border:3px solid var(--lav);cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);transition:.15s}
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--lav);cursor:pointer}
+
+  /* result cards */
+  .results{display:flex;flex-direction:column;gap:16px}
+  .rcard{position:relative;overflow:hidden;border-radius:var(--r);padding:22px 24px;
+    border:1px solid var(--stroke);transition:.25s}
+  .rcard.nap{background:linear-gradient(135deg,rgba(143,227,198,.16),rgba(255,217,142,.10))}
+  .rcard.night{background:linear-gradient(135deg,rgba(185,167,240,.20),rgba(244,166,196,.12))}
+  .rcard.actual{background:linear-gradient(135deg,rgba(255,217,142,.14),rgba(143,227,198,.10));border-color:rgba(255,217,142,.35)}
+  .rcard.actual .rtime{color:var(--gold);font-size:40px}
+  .rcard.actual.empty .rtime{color:var(--faint);font-size:30px}
+  .rcard .rlabel{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--muted);margin-bottom:8px}
+  .rcard .rtime{font-family:'Fraunces',serif;font-weight:500;font-size:52px;line-height:.95;letter-spacing:-1px}
+  .rcard.nap .rtime{color:#bdf0db}.rcard.night .rtime{color:var(--lav-soft)}
+  .rcard .rmeta{font-size:13px;color:var(--muted);margin-top:9px}
+  .rcard .ricon{position:absolute;right:18px;top:18px;width:42px;height:42px;opacity:.85}
+
+  .stats{display:flex;gap:10px;margin-top:4px}
+  .stat{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--stroke);border-radius:var(--r-sm);
+    padding:13px 10px;text-align:center}
+  .stat .sv{font-family:'Fraunces',serif;font-size:18px;color:var(--ink)}
+  .stat .sl{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.25}
+
+  .err-banner{display:none;background:rgba(255,120,150,.12);border:1px solid rgba(255,120,150,.3);
+    color:#ffb3c4;border-radius:var(--r-sm);padding:13px 16px;font-size:13.5px;margin-bottom:4px;align-items:center;gap:9px}
+
+  /* timeline */
+  .timeline-panel{margin-top:22px}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px}
+  .leg{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+  .leg i{width:12px;height:12px;border-radius:4px;display:inline-block}
+
+  .actions{display:flex;gap:12px;align-items:center;margin-top:22px;flex-wrap:wrap}
+  .actions .field{margin:0}
+  .actions input[type=date]{background:rgba(255,255,255,.04);border:1px solid var(--stroke);
+    border-radius:11px;padding:11px 13px;color:var(--ink);font-family:inherit;font-size:14px;color-scheme:dark}
+
+  /* history */
+  .hist-panel{margin-top:22px}
+  .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .hist-metrics{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+  .hmetric{flex:1;min-width:170px;background:rgba(255,255,255,.045);border:1px solid var(--stroke);border-radius:14px;padding:14px 16px}
+  .hmetric .hm-lbl{font-size:12px;color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:7px}
+  .hmetric .hm-val{font-family:'Fraunces',serif;font-size:27px;color:var(--lav-soft);line-height:1}
+  .hmetric .hm-sub{font-size:11px;color:var(--faint);margin-top:5px}
+  .hist-cap{font-size:11.5px;color:var(--faint);margin:0 0 18px;line-height:1.5}
+  .hist-empty{text-align:center;color:var(--faint);font-size:14px;padding:30px 0}
+  .hitem{background:rgba(255,255,255,.035);border:1px solid var(--stroke);border-radius:var(--r-sm);
+    padding:15px 18px;margin-bottom:11px;display:flex;align-items:center;gap:16px;transition:.2s;cursor:pointer}
+  .hitem:hover{background:rgba(255,255,255,.06);border-color:var(--stroke-2)}
+  .hitem .hdate{font-family:'Fraunces',serif;font-size:16px;min-width:120px}
+  .hitem .hdate small{display:block;font-family:'Outfit';font-size:11px;color:var(--faint)}
+  .hitem .htimes{display:flex;gap:22px;flex:1;flex-wrap:wrap}
+  .hitem .ht{font-size:13px;color:var(--muted)}
+  .hitem .ht b{color:var(--ink);font-family:'Fraunces';font-weight:500;font-size:16px;display:block}
+  .hitem .hdel{background:none;border:none;color:var(--faint);cursor:pointer;font-size:18px;padding:4px;border-radius:8px;transition:.2s;line-height:1}
+  .hitem .hdel:hover{color:#ff9bb0;background:rgba(255,120,150,.12)}
+  .fade{animation:fade .4s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:rgba(40,30,75,.95);border:1px solid var(--stroke-2);color:var(--ink);
+    padding:13px 22px;border-radius:14px;font-size:14px;opacity:0;pointer-events:none;transition:.3s;z-index:50;backdrop-filter:blur(10px)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+
+<div class="wrap">
+  <!-- ===== TOP BAR ===== -->
+  <div class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 100 100" fill="none">
+        <defs><radialGradient id="mg" cx="35%" cy="30%"><stop offset="0%" stop-color="#fff7e8"/><stop offset="100%" stop-color="#ffd98e"/></radialGradient></defs>
+        <circle cx="50" cy="50" r="46" fill="rgba(185,167,240,.12)" stroke="rgba(185,167,240,.35)"/>
+        <path d="M62 26a30 30 0 1 0 12 44 24 24 0 1 1-12-44Z" fill="url(#mg)"/>
+        <circle cx="34" cy="30" r="2" fill="#fff" opacity=".9"/><circle cx="26" cy="44" r="1.5" fill="#fff" opacity=".7"/><circle cx="40" cy="22" r="1.3" fill="#fff" opacity=".8"/>
+      </svg>
+      <div>
+        <h1>Планировщик детского сна</h1>
+      </div>
+    </div>
+    <div class="who" id="whoBox" style="display:none">
+      <span>Привет, <b id="whoName"></b></span>
+      <button class="btn btn-ghost" onclick="logout()">Выйти</button>
+    </div>
+  </div>
+
+  <!-- ===== AUTH ===== -->
+  <div class="auth-stage" id="authStage">
+    <div class="auth-card fade">
+      <svg class="auth-moon" viewBox="0 0 100 100" fill="none">
+        <defs><radialGradient id="amg" cx="35%" cy="30%"><stop offset="0%" stop-color="#fff7e8"/><stop offset="100%" stop-color="#ffd98e"/></radialGradient></defs>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(185,167,240,.25)" stroke-dasharray="2 6"/>
+        <path d="M64 22a34 34 0 1 0 14 50 27 27 0 1 1-14-50Z" fill="url(#amg)"/>
+        <circle cx="30" cy="26" r="2.2" fill="#fff"/><circle cx="22" cy="42" r="1.6" fill="#fff" opacity=".7"/><circle cx="36" cy="18" r="1.4" fill="#fff" opacity=".8"/>
+      </svg>
+      <h2 id="authTitle">Вход</h2>
+      <p class="sub" id="authSub">Войдите, чтобы рассчитать режим и сохранять историю по дням</p>
+
+      <div class="field">
+        <label>Логин</label>
+        <input id="loginUser" type="text" placeholder="например, mama_arseniya" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="field" id="confirmField" style="display:none">
+        <label>Повторите пароль</label>
+        <input id="loginPass2" type="password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+
+      <button class="btn btn-primary" id="authBtn" onclick="submitAuth()">Войти</button>
+      <div class="msg" id="authMsg"></div>
+
+      <div class="switcher" id="switcher">
+        Ещё нет аккаунта? <a onclick="toggleMode()">Зарегистрироваться</a>
+      </div>
+      <p class="note">Учётные записи и история хранятся на сервере в базе SQLite. Пароли не хранятся в открытом виде — только криптографический хеш.</p>
+    </div>
+  </div>
+
+  <!-- ===== APP ===== -->
+  <div id="app">
+    <div class="grid">
+      <!-- INPUTS -->
+      <div class="panel fade">
+        <h3>🌤️ Параметры дня</h3>
+        <p class="ph-sub">Меняйте значения — расчёт обновляется сразу</p>
+
+        <div class="slider-field">
+          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Общее бодрствование за день</label><span class="val" id="whVal">12 ч</span></div>
+          <input type="range" id="wh" min="8" max="16" step="0.5" value="12" oninput="calc()">
+        </div>
+        <div class="slider-field">
+          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Первое бодрствование (до дневного сна)</label><span class="val" id="fwVal">6 ч</span></div>
+          <input type="range" id="fw" min="3" max="8" step="0.5" value="6" oninput="calc()">
+        </div>
+
+        <div class="field">
+          <label>Фактическое просыпание утром</label>
+          <input type="time" id="mw" value="07:00" oninput="calc()">
+        </div>
+
+        <div class="field">
+          <label>Количество дневных снов</label>
+          <select id="napCount" onchange="buildNaps();calc()">
+            <option value="1">1 дневной сон</option>
+            <option value="2">2 дневных сна</option>
+            <option value="3">3 дневных сна</option>
+            <option value="4">4 дневных сна</option>
+          </select>
+        </div>
+
+        <div id="napRows"></div>
+
+        <div class="field">
+          <label>Фактический уход в ночь <span class="opt">— необязательно</span></label>
+          <input type="time" id="an" value="" oninput="calc()">
+          <div class="field-hint">Заполните, чтобы увидеть фактическое общее бодрствование</div>
+        </div>
+
+        <div class="actions">
+          <div class="field">
+            <label style="margin-bottom:7px">Дата расчёта</label>
+            <input type="date" id="histDate">
+          </div>
+          <button class="btn btn-primary" style="align-self:flex-end" onclick="saveCalc()">＋ Сохранить в историю</button>
+        </div>
+      </div>
+
+      <!-- RESULTS -->
+      <div class="panel fade">
+        <h3>🌙 Рекомендуемое время засыпания</h3>
+        <p class="ph-sub">Рассчитано из суток в 24 часа по окнам бодрствования</p>
+
+        <div class="err-banner" id="errBanner"><span id="errText"></span></div>
+
+        <div class="results" id="results">
+          <div class="rcard nap">
+            <svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="26" r="13" fill="#8fe3c6" opacity=".25"/><path d="M18 24h12M18 28h8" stroke="#bdf0db" stroke-width="2.5" stroke-linecap="round"/><text x="30" y="16" fill="#bdf0db" font-size="11" font-family="Fraunces">z</text></svg>
+            <div class="rlabel">☀️ Засыпание на первый дневной сон</div>
+            <div class="rtime" id="napTime">13:00</div>
+            <div class="rmeta" id="napMeta"></div>
+          </div>
+          <div class="rcard night">
+            <svg class="ricon" viewBox="0 0 48 48" fill="none"><path d="M30 12a15 15 0 1 0 7 23 12 12 0 1 1-7-23Z" fill="#d8ccff"/></svg>
+            <div class="rlabel">🌙 Рекомендуемое засыпание в ночь</div>
+            <div class="rtime" id="nightTime">21:00</div>
+            <div class="rmeta" id="nightMeta"></div>
+          </div>
+          <div class="rcard actual empty" id="actCard">
+            <svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="14" fill="none" stroke="#ffd98e" stroke-width="2.5" opacity=".7"/><path d="M24 16v8l5 3" stroke="#ffd98e" stroke-width="2.5" stroke-linecap="round"/></svg>
+            <div class="rlabel">⏱️ Фактическое общее бодрствование</div>
+            <div class="rtime" id="actWake">—</div>
+            <div class="rmeta" id="actMeta">Укажите фактический уход в ночь</div>
+          </div>
+
+          <div class="stats">
+            <div class="stat"><div class="sv" id="stMor">6 ч</div><div class="sl">до первого сна</div></div>
+            <div class="stat"><div class="sv" id="stNap">2 ч</div><div class="sl">всего дневного сна</div></div>
+            <div class="stat"><div class="sv" id="stEve">6 ч</div><div class="sl">после сна до ночи</div></div>
+            <div class="stat"><div class="sv" id="stNight">—</div><div class="sl">ночной сон</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="panel timeline-panel fade">
+      <h3>🕐 Распорядок суток</h3>
+      <p class="ph-sub">Полный 24-часовой цикл: бодрствование, дневной и ночной сон</p>
+      <div id="timeline"></div>
+      <div class="legend">
+        <span class="leg"><i style="background:linear-gradient(90deg,#ffd98e,#ffc9a3)"></i> Бодрствование</span>
+        <span class="leg"><i style="background:#8fe3c6"></i> Дневной сон</span>
+        <span class="leg"><i style="background:linear-gradient(90deg,#b9a7f0,#f4a6c4)"></i> Ночной сон</span>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="panel hist-panel fade">
+      <div class="hist-head">
+        <div>
+          <h3>📖 История расчётов</h3>
+          <p class="ph-sub" style="margin:0">Сохранённые режимы по дням · хранилище SQLite · максимум 90 дней</p>
+        </div>
+      </div>
+      <div class="hist-metrics" id="histMetrics"></div>
+      <p class="hist-cap" id="histCap"></p>
+      <div id="histList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- starfield ---------- */
+(function(){
+  const c=document.getElementById('stars');let h='';
+  for(let i=0;i<70;i++){const s=Math.random()*2+1;
+    h+=`<span class="star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;width:${s}px;height:${s}px;animation-delay:${Math.random()*4}s"></span>`;}
+  c.innerHTML=h;
+})();
+
+/* ---------- API client (Flask + серверный SQLite) ---------- */
+/* Все данные (аккаунты, история, сессия) хранятся на сервере.
+   Здесь только обращения к REST API; расчёты остаются на клиенте. */
+async function api(method, path, body){
+  const opt={method, headers:{}, credentials:'same-origin'};
+  if(body!==undefined){opt.headers['Content-Type']='application/json';opt.body=JSON.stringify(body);}
+  const r=await fetch('/api'+path, opt);
+  let data=null; try{data=await r.json();}catch(e){}
+  if(!r.ok) throw new Error((data&&data.error)||('Ошибка сервера ('+r.status+')'));
+  return data;
+}
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
+
+/* ---------- auth ---------- */
+let mode='login', currentUser=null;
+function toggleMode(){
+  mode=mode==='login'?'register':'login';
+  document.getElementById('confirmField').style.display=mode==='register'?'block':'none';
+  document.getElementById('authTitle').textContent=mode==='register'?'Создать аккаунт':'Вход';
+  document.getElementById('authSub').textContent=mode==='register'?'Зарегистрируйтесь, чтобы сохранять историю расчётов':'Войдите, чтобы рассчитать режим и сохранять историю по дням';
+  document.getElementById('authBtn').textContent=mode==='register'?'Зарегистрироваться':'Войти';
+  document.getElementById('switcher').innerHTML=mode==='register'
+    ? 'Уже есть аккаунт? <a onclick="toggleMode()">Войти</a>'
+    : 'Ещё нет аккаунта? <a onclick="toggleMode()">Зарегистрироваться</a>';
+  setMsg('');
+}
+function setMsg(m,type){const e=document.getElementById('authMsg');e.textContent=m||'';e.className='msg '+(type||'');}
+
+async function submitAuth(){
+  const u=document.getElementById('loginUser').value.trim().toLowerCase();
+  const p=document.getElementById('loginPass').value;
+  if(!u||!p){setMsg('Введите логин и пароль','err');return;}
+  if(u.length<3){setMsg('Логин — минимум 3 символа','err');return;}
+  try{
+    if(mode==='register'){
+      const p2=document.getElementById('loginPass2').value;
+      if(p.length<4){setMsg('Пароль — минимум 4 символа','err');return;}
+      if(p!==p2){setMsg('Пароли не совпадают','err');return;}
+      const res=await api('POST','/register',{username:u,password:p});
+      setMsg('Аккаунт создан!','ok');
+      await startSession(res.username);
+    }else{
+      const res=await api('POST','/login',{username:u,password:p});
+      await startSession(res.username);
+    }
+  }catch(e){ setMsg(e.message,'err'); }
+}
+
+async function startSession(u){
+  currentUser=u;
+  document.getElementById('authStage').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('whoBox').style.display='flex';
+  document.getElementById('whoName').textContent=u;
+  const d=new Date();document.getElementById('histDate').value=d.toISOString().slice(0,10);
+  buildNaps();
+  calc();
+  await renderHistory();
+}
+async function logout(){
+  try{ await api('POST','/logout'); }catch(e){}
+  currentUser=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('whoBox').style.display='none';
+  document.getElementById('authStage').style.display='flex';
+  document.getElementById('loginPass').value='';
+}
+
+/* ---------- time math ---------- */
+const t2m=s=>{const[h,m]=s.split(':').map(Number);return h*60+m;};
+const m2t=m=>{const v=((Math.round(m)%1440)+1440)%1440;return `${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;};
+const fh=m=>{const h=Math.floor(m/60),mm=Math.round(m%60);return mm?`${h} ч ${mm} м`:`${h} ч`;};
+
+/* ---------- core calculation ---------- */
+let last=null;
+
+const NAP_DEFAULTS={
+  1:[['13:00','15:00']],
+  2:[['09:30','10:30'],['13:30','15:00']],
+  3:[['09:00','10:00'],['12:30','13:30'],['15:30','16:15']],
+  4:[['08:30','09:15'],['11:00','12:00'],['14:00','15:00'],['16:30','17:00']]
+};
+function buildNaps(){
+  const n=parseInt(document.getElementById('napCount').value);
+  const prev={};
+  document.querySelectorAll('#napRows .nap-row').forEach(r=>{
+    const i=r.dataset.i;prev[i]=[document.getElementById('ns'+i).value,document.getElementById('ne'+i).value];
+  });
+  const def=NAP_DEFAULTS[n];let html='';
+  for(let i=0;i<n;i++){
+    const v=prev[i]||def[i];
+    html+=`<div class="nap-row" data-i="${i}">
+      <span class="nap-badge">Сон ${i+1}</span>
+      <div class="field"><label>Засыпание</label><input type="time" id="ns${i}" value="${v[0]}" oninput="calc()"></div>
+      <div class="field"><label>Пробуждение</label><input type="time" id="ne${i}" value="${v[1]}" oninput="calc()"></div>
+    </div>`;
+  }
+  document.getElementById('napRows').innerHTML=html;
+}
+function getNaps(){
+  const out=[];
+  document.querySelectorAll('#napRows .nap-row').forEach(r=>{
+    const i=r.dataset.i;
+    out.push({s:t2m(document.getElementById('ns'+i).value),e:t2m(document.getElementById('ne'+i).value)});
+  });
+  return out;
+}
+const napWord=n=>n===1?'дневной сон':(n>=2&&n<=4?'дневных сна':'дневных снов');
+
+function calc(){
+  const wh=parseFloat(document.getElementById('wh').value);
+  const fw=parseFloat(document.getElementById('fw').value);
+  document.getElementById('whVal').textContent=wh.toString().replace(/\.0$/,'')+' ч';
+  document.getElementById('fwVal').textContent=fw.toString().replace(/\.0$/,'')+' ч';
+  const mw=t2m(document.getElementById('mw').value);
+  const naps=getNaps();
+  const anStr=document.getElementById('an').value;
+  const an=anStr?t2m(anStr):null;
+  const whM=wh*60, fwM=fw*60;
+
+  const banner=document.getElementById('errBanner');
+  function err(t){banner.style.display='flex';document.getElementById('errText').textContent='⚠ '+t;document.getElementById('results').style.opacity='.35';last=null;}
+  function ok(){banner.style.display='none';document.getElementById('results').style.opacity='1';}
+
+  if(!naps.length){err('Добавьте хотя бы один дневной сон');drawTimeline(null);return;}
+  if(naps[0].s<=mw){err('Первый сон должен начинаться позже утреннего подъёма');drawTimeline(null);return;}
+  for(let i=0;i<naps.length;i++){
+    if(naps[i].e<=naps[i].s){err(`Пробуждение от сна ${i+1} должно быть позже засыпания`);drawTimeline(null);return;}
+    if(i>0&&naps[i].s<naps[i-1].e){err(`Сон ${i+1} начинается раньше пробуждения от сна ${i}`);drawTimeline(null);return;}
+  }
+
+  const napTotal=naps.reduce((s,n)=>s+(n.e-n.s),0);
+  const lastEnd=naps[naps.length-1].e;
+  ok();
+
+  // Рекомендации
+  const recFirst=mw+fwM;                 // первый сон по ползунку первого окна
+  const recNight=mw+whM+napTotal;        // чтобы общее бодрствование = план
+  const effNight=(an!=null)?an:recNight; // что рисуем на таймлайне
+  let effNightAbs=effNight; if(effNightAbs<=lastEnd) effNightAbs+=1440;
+
+  const firstWindowM=naps[0].s-mw;
+  const eveWindowM=effNightAbs-lastEnd;
+  const nightDurM=(mw+1440)-effNightAbs;
+
+  // Фактическое общее бодрствование
+  let actWakeM=null;
+  if(an!=null){ let anAbs=an; if(anAbs<=lastEnd) anAbs+=1440; actWakeM=(anAbs-mw)-napTotal; }
+
+  document.getElementById('napTime').textContent=m2t(recFirst);
+  document.getElementById('nightTime').textContent=m2t(recNight);
+
+  const fd=naps[0].s-recFirst;
+  document.getElementById('napMeta').textContent =
+    fd===0?`Факт совпадает с рекомендацией (${m2t(naps[0].s)})`
+    :`Рекоменд.: ${m2t(recFirst)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`;
+  document.getElementById('nightMeta').textContent =
+    `${naps.length} ${napWord(naps.length)} · Σ сна ${fh(napTotal)} · вечернее окно ${fh(recNight-lastEnd)}`;
+
+  const actCard=document.getElementById('actCard');
+  if(actWakeM!=null){
+    actCard.classList.remove('empty');
+    document.getElementById('actWake').textContent=fh(actWakeM);
+    const dlt=actWakeM-whM;
+    document.getElementById('actMeta').textContent=
+      `Факт. уход в ночь ${anStr} · ${dlt===0?'точно по плану':(dlt>0?'на '+fh(dlt)+' больше плана':'на '+fh(-dlt)+' меньше плана')}`;
+  }else{
+    actCard.classList.add('empty');
+    document.getElementById('actWake').textContent='—';
+    document.getElementById('actMeta').textContent='Укажите фактический уход в ночь';
+  }
+
+  document.getElementById('stMor').textContent=fh(firstWindowM);
+  document.getElementById('stNap').textContent=fh(napTotal);
+  document.getElementById('stEve').textContent=fh(eveWindowM);
+  document.getElementById('stNight').textContent=nightDurM>0?fh(nightDurM):'—';
+
+  last={wh,fw,mw:m2t(mw),napCount:naps.length,
+        naps:naps.map(n=>({s:m2t(n.s),e:m2t(n.e)})),
+        napTotal,recFirst:m2t(recFirst),recNight:m2t(recNight),
+        an:anStr||'',actWakeM,firstWindowM,eveWindowM,nightDurM};
+  drawTimeline({mw,naps,recFirst,recNight,nightAbs:effNightAbs,anGiven:an!=null});
+}
+
+/* ---------- timeline (24h horizontal, N naps) ---------- */
+function drawTimeline(d){
+  const el=document.getElementById('timeline');
+  if(!d){el.innerHTML='<p style="color:var(--faint);font-size:13px;padding:14px 0">Исправьте параметры, чтобы увидеть распорядок</p>';return;}
+  const W=1000,BH=60,baseY=14,labelY=BH+baseY+24,total=1440;
+  const px=t=>((((t%1440)+1440)%1440)/total)*W;
+
+  const segs=[];let cur=d.mw;
+  d.naps.forEach(n=>{segs.push({a:cur,b:n.s,type:'wake'});segs.push({a:n.s,b:n.e,type:'nap'});cur=n.e;});
+  segs.push({a:cur,b:d.nightAbs,type:'wake'});
+  segs.push({a:d.nightAbs,b:d.mw+1440,type:'night'});
+
+  const fill={wake:'url(#gW)',nap:'#8fe3c6',night:'url(#gN)'};
+  let rects='';
+  segs.forEach(s=>{
+    let a=s.a,b=s.b;
+    if(a>=1440){a-=1440;b-=1440;}
+    const parts=(b>1440)?[[a,1440],[0,b-1440]]:[[a,b]];
+    parts.forEach(([pa,pb])=>{const x=px(pa),w=(pb-pa)/total*W;if(w<=0)return;
+      rects+=`<rect x="${x.toFixed(1)}" y="${baseY}" width="${w.toFixed(1)}" height="${BH}" fill="${fill[s.type]}" opacity="${s.type==='night'?.92:.85}"/>`;});
+  });
+
+  let ticks='';
+  for(let h=0;h<=24;h+=3){const x=px(h*60>=1440?1439.9:h*60);
+    ticks+=`<line x1="${x}" y1="${baseY+BH}" x2="${x}" y2="${baseY+BH+6}" stroke="rgba(184,167,240,.4)" stroke-width="1"/>`;
+    ticks+=`<text x="${x}" y="${labelY+2}" fill="#a99fce" font-size="13" font-family="Outfit" text-anchor="middle">${String(h%24).padStart(2,'0')}:00</text>`;}
+
+  const M=[{t:d.mw,c:'#ffd98e',lab:'подъём '+m2t(d.mw),up:1}];
+  d.naps.forEach((n,i)=>M.push({t:n.s,c:'#8fe3c6',lab:'сон '+(i+1)+' '+m2t(n.s),up:0}));
+  M.push({t:d.nightAbs,c:'#d8ccff',lab:(d.anGiven?'факт. ночь ':'ночь ')+m2t(d.nightAbs),up:0,big:1});
+  if(Math.abs(d.recFirst-d.naps[0].s)>=5)M.push({t:d.recFirst,c:'#6c6396',lab:'реком. '+m2t(d.recFirst),up:1,faint:1});
+  if(d.anGiven&&Math.abs(((d.recNight%1440)+1440)%1440-((d.nightAbs%1440)+1440)%1440)>=5)
+    M.push({t:d.recNight,c:'#6c6396',lab:'реком. ночь '+m2t(d.recNight),up:1,faint:1});
+
+  let marks='';
+  M.forEach(m=>{const x=px(m.t);const r=m.big?6:4;
+    marks+=`<line x1="${x}" y1="${baseY-6}" x2="${x}" y2="${baseY+BH+6}" stroke="${m.c}" stroke-width="${m.big?2:1.3}" opacity="${m.faint?.6:.9}"/>`;
+    marks+=`<circle cx="${x}" cy="${m.up?baseY-6:baseY+BH+6}" r="${r}" fill="${m.c}"/>`;
+    const ty=m.up?baseY-12:baseY+BH+22;
+    const anchor=x<70?'start':x>W-70?'end':'middle';
+    marks+=`<text x="${x}" y="${ty}" fill="${m.c}" font-size="12" font-family="Outfit" font-weight="500" text-anchor="${anchor}">${m.lab}</text>`;});
+
+  el.innerHTML=`<svg viewBox="0 -10 ${W} ${labelY+34}" width="100%" style="display:block;overflow:visible">
+    <defs>
+      <linearGradient id="gW" x1="0" x2="1"><stop offset="0" stop-color="#ffd98e"/><stop offset="1" stop-color="#ffc9a3"/></linearGradient>
+      <linearGradient id="gN" x1="0" x2="1"><stop offset="0" stop-color="#b9a7f0"/><stop offset="1" stop-color="#f4a6c4"/></linearGradient>
+    </defs>
+    <rect x="0" y="${baseY}" width="${W}" height="${BH}" rx="12" fill="rgba(255,255,255,.04)"/>
+    <clipPath id="cp"><rect x="0" y="${baseY}" width="${W}" height="${BH}" rx="12"/></clipPath>
+    <g clip-path="url(#cp)">${rects}</g>
+    <rect x="0" y="${baseY}" width="${W}" height="${BH}" rx="12" fill="none" stroke="var(--stroke)"/>
+    ${ticks}${marks}
+  </svg>`;
+}
+
+/* ---------- history (SQLite) ---------- */
+async function saveCalc(){
+  if(!last){toast('Сначала исправьте параметры');return;}
+  const date=document.getElementById('histDate').value;
+  if(!date){toast('Выберите дату');return;}
+  try{
+    const res=await api('POST','/history',Object.assign({date},last));
+    toast(res.updated?'Запись за '+fmtDate(date)+' обновлена':'Сохранено в историю');
+    await renderHistory();
+  }catch(e){ toast(e.message); }
+}
+function dStr(offsetDays){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-offsetDays);return d.toISOString().slice(0,10);}
+function avgWake(rows,days){
+  const from=dStr(days-1), to=dStr(0);
+  let sum=0,n=0;
+  rows.forEach(h=>{
+    if(h.date>=from && h.date<=to){
+      const w=(h.actual_wake_m!=null)?h.actual_wake_m:h.wh*60; // факт, где есть; иначе план
+      sum+=w;n++;
+    }
+  });
+  return {avg:n?sum/n:null,n};
+}
+async function renderHistory(){
+  let rows=[];
+  try{ rows=await api('GET','/history'); }catch(e){ rows=[]; }
+
+  // средние показатели общего бодрствования
+  const a7=avgWake(rows,7), a30=avgWake(rows,30);
+  document.getElementById('histMetrics').innerHTML=`
+    <div class="hmetric">
+      <div class="hm-lbl">📊 Среднее бодрствование · 7 дней</div>
+      <div class="hm-val">${a7.avg!=null?fh(a7.avg):'—'}</div>
+      <div class="hm-sub">${a7.n?'усреднено по '+a7.n+' дн.':'нет записей за период'}</div>
+    </div>
+    <div class="hmetric">
+      <div class="hm-lbl">📈 Среднее бодрствование · 30 дней</div>
+      <div class="hm-val">${a30.avg!=null?fh(a30.avg):'—'}</div>
+      <div class="hm-sub">${a30.n?'усреднено по '+a30.n+' дн.':'нет записей за период'}</div>
+    </div>`;
+  document.getElementById('histCap').textContent =
+    'Учитывается фактическое общее бодрствование, где указан уход в ночь, иначе плановое. Записи старше 90 дней удаляются автоматически.';
+
+  const el=document.getElementById('histList');
+  if(!rows.length){el.innerHTML='<div class="hist-empty">Пока нет сохранённых дней.<br>Рассчитайте режим и нажмите «Сохранить в историю».</div>';return;}
+  el.innerHTML=rows.map(h=>`
+    <div class="hitem fade" onclick="loadRec('${h.date}')">
+      <div class="hdate">${fmtDate(h.date)}<small>${h.nap_count} ${napWord(h.nap_count)} · план ${h.wh} ч</small></div>
+      <div class="htimes">
+        <div class="ht">просыпание<b>${h.mw}</b></div>
+        <div class="ht">реком. ночь<b>${h.rec_night}</b></div>
+        <div class="ht">факт. ночь<b>${h.actual_night||'—'}</b></div>
+        <div class="ht">факт. бодрст.<b>${h.actual_wake_m!=null?fh(h.actual_wake_m):'—'}</b></div>
+      </div>
+      <button class="hdel" onclick="event.stopPropagation();delRec('${h.date}')" title="Удалить">✕</button>
+    </div>`).join('');
+}
+async function loadRec(date){
+  let rows=[];
+  try{ rows=await api('GET','/history'); }catch(e){ return; }
+  const h=rows.find(x=>x.date===date); if(!h)return;
+  document.getElementById('wh').value=h.wh;
+  document.getElementById('fw').value=h.fw;
+  document.getElementById('mw').value=h.mw;
+  document.getElementById('napCount').value=h.nap_count||1;
+  buildNaps();
+  let naps=[];try{naps=JSON.parse(h.naps_json||'[]');}catch(e){}
+  naps.forEach((n,i)=>{const a=document.getElementById('ns'+i),b=document.getElementById('ne'+i);if(a)a.value=n.s;if(b)b.value=n.e;});
+  document.getElementById('an').value=h.actual_night||'';
+  document.getElementById('histDate').value=h.date;
+  calc();
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast('Загружен расчёт за '+fmtDate(date));
+}
+async function delRec(date){
+  try{ await api('DELETE','/history/'+encodeURIComponent(date)); toast('Запись удалена'); }
+  catch(e){ toast(e.message); }
+  await renderHistory();
+}
+function fmtDate(d){const[y,m,day]=d.split('-');const mo=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];return `${parseInt(day)} ${mo[parseInt(m)-1]} ${y}`;}
+
+/* ---------- boot: restore session via API ---------- */
+(async function(){
+  try{
+    const me=await api('GET','/me');
+    if(me && me.username) await startSession(me.username);
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
