@@ -86,7 +86,7 @@
 
         <div class="field">
           <label>Фактическое время утреннего подъема</label>
-          <input type="time" id="mw" value="07:00" oninput="calc()">
+          <input type="time" id="mw" value="07:00" lang="ru-RU" oninput="calc()">
         </div>
 
         <div class="field">
@@ -103,17 +103,19 @@
 
         <div class="field">
           <label>Фактический уход в ночь <span class="opt">— необязательно</span></label>
-          <input type="time" id="an" value="" oninput="calc()">
+          <input type="time" id="an" value="" lang="ru-RU" oninput="calc()">
           <div class="field-hint">Заполните, чтобы увидеть фактическое общее бодрствование</div>
         </div>
 
         <div class="actions">
           <div class="field">
             <label style="margin-bottom:7px">Дата расчёта</label>
-            <input type="date" id="histDate">
+            <input type="date" id="histDate" lang="ru-RU">
           </div>
           <button class="btn btn-primary" style="align-self:flex-end" onclick="saveCalc()">＋ Сохранить в историю</button>
-          <button class="btn btn-ghost" style="align-self:flex-end" onclick="clearFields()">↺ Очистить поля</button>
+          <button class="icon-btn" style="align-self:flex-end" data-tip="Очистить поля" aria-label="Очистить поля" onclick="clearFields()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+          </button>
         </div>
       </div>
 
@@ -288,8 +290,8 @@ function buildNaps(){
     const v=prev[i]||def[i];
     html+=`<div class="nap-row" data-i="${i}">
       <span class="nap-badge">Сон ${i+1}</span>
-      <div class="field"><label>Засыпание</label><input type="time" id="ns${i}" value="${v[0]}" oninput="calc()"></div>
-      <div class="field"><label>Пробуждение</label><input type="time" id="ne${i}" value="${v[1]}" oninput="calc()"></div>
+      <div class="field"><label>Засыпание</label><input type="time" id="ns${i}" value="${v[0]}" lang="ru-RU" oninput="calc()"></div>
+      <div class="field"><label>Пробуждение</label><input type="time" id="ne${i}" value="${v[1]}" lang="ru-RU" oninput="calc()"></div>
     </div>`;
   }
   document.getElementById('napRows').innerHTML=html;
@@ -525,7 +527,7 @@ async function delRec(date){
   catch(e){ toast(e.message); }
   await renderHistory();
 }
-function fmtDate(d){const[y,m,day]=d.split('-');const mo=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];return `${parseInt(day)} ${mo[parseInt(m)-1]} ${y}`;}
+function fmtDate(d){const[y,m,day]=d.split('-');return `${day}/${m}/${y}`;}
 
 /* ---------- boot: restore session via API ---------- */
 (async function(){
