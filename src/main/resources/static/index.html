@@ -7,168 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --night-0:#0e0a24; --night-1:#171138; --night-2:#241a52;
-    --plum:#352a6b; --lav:#b9a7f0; --lav-soft:#d8ccff;
-    --peach:#ffc9a3; --gold:#ffd98e; --mint:#8fe3c6; --mint-deep:#3fae8c;
-    --rose:#f4a6c4;
-    --ink:#f3efff; --muted:#a99fce; --faint:#6c6396;
-    --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.09);
-    --stroke:rgba(184,167,240,.18); --stroke-2:rgba(184,167,240,.34);
-    --r:18px; --r-sm:12px;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
-  html{background:#15112e}
-  body{
-    font-family:'Outfit',sans-serif;color:var(--ink);
-    background:
-      radial-gradient(1100px 600px at 50% 0%, rgba(185,167,240,.10), transparent 60%),
-      #15112e;
-    background-attachment:fixed;
-    min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;
-  }
-  .stars{position:fixed;inset:0;pointer-events:none;z-index:0}
-  .star{position:absolute;background:#fff;border-radius:50%;opacity:.5;animation:tw 4s ease-in-out infinite}
-  @keyframes tw{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:.9;transform:scale(1.15)}}
-  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:28px 22px 80px}
-
-  /* ---------- top bar ---------- */
-  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:30px}
-  .brand{display:flex;align-items:center;gap:13px}
-  .logo{width:46px;height:46px;flex:none}
-  .brand h1{font-family:'Fraunces',serif;font-weight:500;font-size:23px;letter-spacing:.2px;line-height:1}
-  .brand span{font-size:12.5px;color:var(--muted);letter-spacing:.3px}
-  .who{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--muted)}
-  .who b{color:var(--ink);font-weight:500}
-  .btn{font-family:inherit;cursor:pointer;border:none;border-radius:999px;transition:.22s;font-size:14px}
-  .btn-ghost{background:var(--glass);border:1px solid var(--stroke);color:var(--ink);padding:9px 17px}
-  .btn-ghost:hover{background:var(--glass-2);border-color:var(--stroke-2)}
-  .btn-primary{background:linear-gradient(110deg,var(--lav),var(--rose));color:#1a1233;font-weight:600;padding:12px 22px;box-shadow:0 10px 30px -12px rgba(185,167,240,.7)}
-  .btn-primary:hover{filter:brightness(1.06);transform:translateY(-1px)}
-  .btn-primary:active{transform:translateY(0)}
-
-  /* ---------- auth ---------- */
-  .auth-stage{min-height:74vh;display:flex;align-items:center;justify-content:center}
-  .auth-card{width:100%;max-width:430px;background:var(--glass);backdrop-filter:blur(22px);
-    border:1px solid var(--stroke);border-radius:26px;padding:38px 34px;
-    box-shadow:0 40px 90px -40px rgba(0,0,0,.7)}
-  .auth-moon{width:84px;height:84px;margin:0 auto 18px;display:block}
-  .auth-card h2{font-family:'Fraunces',serif;font-weight:500;font-size:27px;text-align:center;margin-bottom:6px}
-  .auth-card .sub{text-align:center;color:var(--muted);font-size:14px;margin-bottom:26px;line-height:1.5}
-  .field{margin-bottom:16px}
-  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;letter-spacing:.3px}
-  .field input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--stroke);
-    border-radius:13px;padding:13px 15px;color:var(--ink);font-family:inherit;font-size:15px;transition:.2s}
-  .field input:focus{outline:none;border-color:var(--lav);background:rgba(185,167,240,.08);
-    box-shadow:0 0 0 4px rgba(185,167,240,.12)}
-  .field input::placeholder{color:var(--faint)}
-  .auth-card .btn-primary{width:100%;margin-top:6px}
-  .switcher{text-align:center;margin-top:20px;font-size:13.5px;color:var(--muted)}
-  .switcher a{color:var(--lav);cursor:pointer;font-weight:500}
-  .switcher a:hover{text-decoration:underline}
-  .note{font-size:11.5px;color:var(--faint);text-align:center;margin-top:18px;line-height:1.5}
-  .msg{font-size:13px;text-align:center;margin-top:14px;min-height:18px;transition:.2s}
-  .msg.err{color:#ff9bb0}.msg.ok{color:var(--mint)}
-
-  /* ---------- app layout ---------- */
-  #app{display:none}
-  .grid{display:grid;grid-template-columns:1fr 1.25fr;gap:22px;align-items:start}
-  @media(max-width:880px){.grid{grid-template-columns:1fr}}
-  .panel{background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--stroke);
-    border-radius:var(--r);padding:26px 24px;box-shadow:0 30px 70px -45px rgba(0,0,0,.65)}
-  .panel h3{font-family:'Fraunces',serif;font-weight:500;font-size:19px;margin-bottom:4px;display:flex;align-items:center;gap:9px}
-  .panel .ph-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
-
-  .inrow{display:flex;gap:14px;margin-bottom:16px}
-  .inrow .field{flex:1;margin:0}
-  .field-hint{font-size:11px;color:var(--faint);margin-top:5px}
-  input[type=time]{color-scheme:dark}
-  select{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--stroke);border-radius:13px;
-    padding:13px 15px;color:var(--ink);font-family:inherit;font-size:15px;cursor:pointer;color-scheme:dark;transition:.2s}
-  select:focus{outline:none;border-color:var(--lav);box-shadow:0 0 0 4px rgba(185,167,240,.12)}
-  select option{background:#1c1540;color:var(--ink)}
-  .opt{color:var(--faint);font-size:11px;font-weight:400}
-  .nap-row{display:flex;align-items:flex-end;gap:11px;background:rgba(255,255,255,.03);border:1px solid var(--stroke);
-    border-radius:14px;padding:12px 13px;margin-bottom:11px}
-  .nap-row .nap-badge{flex:none;align-self:center;font-family:'Fraunces',serif;font-size:13px;color:var(--mint);
-    background:rgba(143,227,198,.12);border:1px solid rgba(143,227,198,.25);border-radius:9px;padding:7px 10px;white-space:nowrap}
-  .nap-row .field{flex:1;margin:0}
-  .nap-row .field label{font-size:11.5px}
-  /* range */
-  .slider-field{margin-bottom:18px}
-  .slider-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
-  .slider-top .val{font-family:'Fraunces',serif;font-size:21px;color:var(--lav-soft)}
-  input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:999px;
-    background:linear-gradient(90deg,var(--lav),var(--rose));outline:none}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;
-    background:#fff;border:3px solid var(--lav);cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);transition:.15s}
-  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
-  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--lav);cursor:pointer}
-
-  /* result cards */
-  .results{display:flex;flex-direction:column;gap:16px}
-  .rcard{position:relative;overflow:hidden;border-radius:var(--r);padding:22px 24px;
-    border:1px solid var(--stroke);transition:.25s}
-  .rcard.nap{background:linear-gradient(135deg,rgba(143,227,198,.16),rgba(255,217,142,.10))}
-  .rcard.night{background:linear-gradient(135deg,rgba(185,167,240,.20),rgba(244,166,196,.12))}
-  .rcard.actual{background:linear-gradient(135deg,rgba(255,217,142,.14),rgba(143,227,198,.10));border-color:rgba(255,217,142,.35)}
-  .rcard.actual .rtime{color:var(--gold);font-size:40px}
-  .rcard.actual.empty .rtime{color:var(--faint);font-size:30px}
-  .rcard .rlabel{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--muted);margin-bottom:8px}
-  .rcard .rtime{font-family:'Fraunces',serif;font-weight:500;font-size:52px;line-height:.95;letter-spacing:-1px}
-  .rcard.nap .rtime{color:#bdf0db}.rcard.night .rtime{color:var(--lav-soft)}
-  .rcard .rmeta{font-size:13px;color:var(--muted);margin-top:9px}
-  .rcard .ricon{position:absolute;right:18px;top:18px;width:42px;height:42px;opacity:.85}
-
-  .stats{display:flex;gap:10px;margin-top:4px}
-  .stat{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--stroke);border-radius:var(--r-sm);
-    padding:13px 10px;text-align:center}
-  .stat .sv{font-family:'Fraunces',serif;font-size:18px;color:var(--ink)}
-  .stat .sl{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.25}
-
-  .err-banner{display:none;background:rgba(255,120,150,.12);border:1px solid rgba(255,120,150,.3);
-    color:#ffb3c4;border-radius:var(--r-sm);padding:13px 16px;font-size:13.5px;margin-bottom:4px;align-items:center;gap:9px}
-
-  /* timeline */
-  .timeline-panel{margin-top:22px}
-  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px}
-  .leg{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
-  .leg i{width:12px;height:12px;border-radius:4px;display:inline-block}
-
-  .actions{display:flex;gap:12px;align-items:center;margin-top:22px;flex-wrap:wrap}
-  .actions .field{margin:0}
-  .actions input[type=date]{background:rgba(255,255,255,.04);border:1px solid var(--stroke);
-    border-radius:11px;padding:11px 13px;color:var(--ink);font-family:inherit;font-size:14px;color-scheme:dark}
-
-  /* history */
-  .hist-panel{margin-top:22px}
-  .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-  .hist-metrics{display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap}
-  .hmetric{flex:1;min-width:170px;background:rgba(255,255,255,.045);border:1px solid var(--stroke);border-radius:14px;padding:14px 16px}
-  .hmetric .hm-lbl{font-size:12px;color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:7px}
-  .hmetric .hm-val{font-family:'Fraunces',serif;font-size:27px;color:var(--lav-soft);line-height:1}
-  .hmetric .hm-sub{font-size:11px;color:var(--faint);margin-top:5px}
-  .hist-cap{font-size:11.5px;color:var(--faint);margin:0 0 18px;line-height:1.5}
-  .hist-empty{text-align:center;color:var(--faint);font-size:14px;padding:30px 0}
-  .hitem{background:rgba(255,255,255,.035);border:1px solid var(--stroke);border-radius:var(--r-sm);
-    padding:15px 18px;margin-bottom:11px;display:flex;align-items:center;gap:16px;transition:.2s;cursor:pointer}
-  .hitem:hover{background:rgba(255,255,255,.06);border-color:var(--stroke-2)}
-  .hitem .hdate{font-family:'Fraunces',serif;font-size:16px;min-width:120px}
-  .hitem .hdate small{display:block;font-family:'Outfit';font-size:11px;color:var(--faint)}
-  .hitem .htimes{display:flex;gap:22px;flex:1;flex-wrap:wrap}
-  .hitem .ht{font-size:13px;color:var(--muted)}
-  .hitem .ht b{color:var(--ink);font-family:'Fraunces';font-weight:500;font-size:16px;display:block}
-  .hitem .hdel{background:none;border:none;color:var(--faint);cursor:pointer;font-size:18px;padding:4px;border-radius:8px;transition:.2s;line-height:1}
-  .hitem .hdel:hover{color:#ff9bb0;background:rgba(255,120,150,.12)}
-  .fade{animation:fade .4s ease}
-  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
-    background:rgba(40,30,75,.95);border:1px solid var(--stroke-2);color:var(--ink);
-    padding:13px 22px;border-radius:14px;font-size:14px;opacity:0;pointer-events:none;transition:.3s;z-index:50;backdrop-filter:blur(10px)}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="stars" id="stars"></div>
@@ -224,7 +63,7 @@
       <div class="switcher" id="switcher">
         Ещё нет аккаунта? <a onclick="toggleMode()">Зарегистрироваться</a>
       </div>
-      <p class="note">Учётные записи и история хранятся на сервере в базе SQLite. Пароли не хранятся в открытом виде — только криптографический хеш.</p>
+      <p class="note">Учётные записи и история хранятся на сервере. Пароли не хранятся в открытом виде — только криптографический хеш.</p>
     </div>
   </div>
 
@@ -274,6 +113,7 @@
             <input type="date" id="histDate">
           </div>
           <button class="btn btn-primary" style="align-self:flex-end" onclick="saveCalc()">＋ Сохранить в историю</button>
+          <button class="btn btn-ghost" style="align-self:flex-end" onclick="clearFields()">↺ Очистить поля</button>
         </div>
       </div>
 
@@ -331,7 +171,7 @@
       <div class="hist-head">
         <div>
           <h3>📖 История расчётов</h3>
-          <p class="ph-sub" style="margin:0">Сохранённые режимы по дням · хранилище SQLite · максимум 90 дней</p>
+          <p class="ph-sub" style="margin:0">Сохранённые режимы по дням · максимум 90 дней</p>
         </div>
       </div>
       <div class="hist-metrics" id="histMetrics"></div>
@@ -352,7 +192,7 @@
   c.innerHTML=h;
 })();
 
-/* ---------- API client (Flask + серверный SQLite) ---------- */
+/* ---------- API client ---------- */
 /* Все данные (аккаунты, история, сессия) хранятся на сервере.
    Здесь только обращения к REST API; расчёты остаются на клиенте. */
 async function api(method, path, body){
@@ -594,7 +434,19 @@ function drawTimeline(d){
   </svg>`;
 }
 
-/* ---------- history (SQLite) ---------- */
+/* ---------- clear inputs to defaults ---------- */
+function clearFields(){
+  document.getElementById('wh').value=12;
+  document.getElementById('fw').value=6;
+  document.getElementById('mw').value='07:00';
+  document.getElementById('napCount').value='1';
+  document.getElementById('an').value='';
+  buildNaps();
+  calc();
+  toast('Поля очищены');
+}
+
+/* ---------- history ---------- */
 async function saveCalc(){
   if(!last){toast('Сначала исправьте параметры');return;}
   const date=document.getElementById('histDate').value;
