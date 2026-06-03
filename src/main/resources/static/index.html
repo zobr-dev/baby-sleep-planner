@@ -112,7 +112,9 @@
             <label style="margin-bottom:7px">Дата расчёта</label>
             <input type="date" id="histDate" lang="ru-RU">
           </div>
-          <button class="btn btn-primary" style="align-self:flex-end" onclick="saveCalc()">＋ Сохранить в историю</button>
+          <button class="icon-btn" style="align-self:flex-end" data-tip="Сохранить в историю" aria-label="Сохранить в историю" onclick="saveCalc()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+          </button>
           <button class="icon-btn" style="align-self:flex-end" data-tip="Очистить поля" aria-label="Очистить поля" onclick="clearFields()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>
           </button>
@@ -262,27 +264,21 @@ async function logout(){
 
 /* ---------- time math ---------- */
 const t2m=s=>{const[h,m]=s.split(':').map(Number);return h*60+m;};
-const m2t=m=>{const v=((Math.round(m)%1440)+1440)%1440;return `${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;};
-const fh=m=>{const h=Math.floor(m/60),mm=Math.round(m%60);return mm?`${h} ч ${mm} м`:`${h} ч`;};
+const m2t=m=>{if(!Number.isFinite(m))return '—';const v=((Math.round(m)%1440)+1440)%1440;return `${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;};
+const fh=m=>{if(!Number.isFinite(m))return '—';const h=Math.floor(m/60),mm=Math.round(m%60);return mm?`${h} ч ${mm} м`:`${h} ч`;};
 
 /* ---------- core calculation ---------- */
 let last=null;
 
-const NAP_DEFAULTS={
-  1:[['13:00','15:00']],
-  2:[['09:30','10:30'],['13:30','15:00']],
-  3:[['09:00','10:00'],['12:30','13:30'],['15:30','16:15']],
-  4:[['08:30','09:15'],['11:00','12:00'],['14:00','15:00'],['16:30','17:00']]
-};
 function buildNaps(){
   const n=parseInt(document.getElementById('napCount').value);
   const prev={};
   document.querySelectorAll('#napRows .nap-row').forEach(r=>{
     const i=r.dataset.i;prev[i]=[document.getElementById('ns'+i).value,document.getElementById('ne'+i).value];
   });
-  const def=NAP_DEFAULTS[n];let html='';
+  let html='';
   for(let i=0;i<n;i++){
-    const v=prev[i]||def[i];
+    const v=prev[i]||['',''];
     html+=`<div class="nap-row" data-i="${i}">
       <span class="nap-badge">Сон ${i+1}</span>
       <div class="field"><label>Засыпание</label><input type="time" id="ns${i}" value="${v[0]}" lang="ru-RU" oninput="calc()"></div>
@@ -317,10 +313,13 @@ function calc(){
   function ok(){banner.style.display='none';document.getElementById('results').style.opacity='1';}
 
   if(!naps.length){err('Добавьте хотя бы один дневной сон');drawTimeline(null);return;}
+  const napsComplete=naps.every(n=>Number.isFinite(n.s)&&Number.isFinite(n.e));
+  if(napsComplete){
   if(naps[0].s<=mw){err('Первый сон должен начинаться позже утреннего подъёма');drawTimeline(null);return;}
   for(let i=0;i<naps.length;i++){
     if(naps[i].e<=naps[i].s){err(`Пробуждение от сна ${i+1} должно быть позже засыпания`);drawTimeline(null);return;}
     if(i>0&&naps[i].s<naps[i-1].e){err(`Сон ${i+1} начинается раньше пробуждения от сна ${i}`);drawTimeline(null);return;}
+  }
   }
 
   const napTotal=naps.reduce((s,n)=>s+(n.e-n.s),0);
@@ -359,8 +358,10 @@ function calc(){
   const ord=['первый','второй','третий','четвёртый'];
   document.getElementById('napCards').innerHTML=recNaps.map((rn,i)=>{
     const fd=naps[i].s-rn.s;
-    const meta=fd===0?`Факт совпадает с рекомендацией (${m2t(naps[i].s)})`
-      :`Рекоменд.: ${m2t(rn.s)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`;
+    let meta;
+    if(!Number.isFinite(naps[i].s)||!Number.isFinite(rn.s)) meta=`Рекоменд.: ${m2t(rn.s)}`;
+    else if(fd===0) meta=`Факт совпадает с рекомендацией (${m2t(naps[i].s)})`;
+    else meta=`Рекоменд.: ${m2t(rn.s)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`;
     const label=N>1?`☀️ Засыпание на ${ord[i]} дневной сон`:'☀️ Засыпание на дневной сон';
     return `<div class="rcard nap">${napSvg}<div class="rlabel">${label}</div><div class="rtime">${m2t(rn.s)}</div><div class="rmeta">${meta}</div></div>`;
   }).join('');
@@ -386,11 +387,11 @@ function calc(){
   document.getElementById('stEve').textContent=fh(eveWindowM);
   document.getElementById('stNight').textContent=nightDurM>0?fh(nightDurM):'—';
 
-  last={wh,fw,mw:m2t(mw),napCount:naps.length,
+  last=napsComplete?{wh,fw,mw:m2t(mw),napCount:naps.length,
         naps:naps.map(n=>({s:m2t(n.s),e:m2t(n.e)})),
         napTotal,recFirst:m2t(recFirst),recNight:m2t(recNight),
-        an:anStr||'',actWakeM,firstWindowM,eveWindowM,nightDurM};
-  drawTimeline({mw,naps,recFirst,recNight,nightAbs:effNightAbs,anGiven:an!=null});
+        an:anStr||'',actWakeM,firstWindowM,eveWindowM,nightDurM}:null;
+  drawTimeline(napsComplete?{mw,naps,recFirst,recNight,nightAbs:effNightAbs,anGiven:an!=null}:null);
 }
 
 /* ---------- timeline (24h horizontal, N naps) ---------- */
@@ -456,6 +457,7 @@ function clearFields(){
   document.getElementById('napCount').value='1';
   document.getElementById('an').value='';
   buildNaps();
+  document.querySelectorAll('#napRows input').forEach(inp=>inp.value='');
   calc();
   toast('Поля очищены');
 }
