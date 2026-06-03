@@ -76,12 +76,12 @@
         <p class="ph-sub">Меняйте значения — расчёт обновляется сразу</p>
 
         <div class="slider-field">
-          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое общее бодрствование за день</label><span class="val" id="whVal">12 ч</span></div>
-          <input type="range" id="wh" min="8" max="16" step="0.5" value="12" oninput="calc()">
+          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое общее бодрствование за день</label><span class="val" id="whVal">12 часов</span></div>
+          <input type="range" id="wh" min="480" max="960" step="5" value="720" oninput="calc()">
         </div>
         <div class="slider-field">
-          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 ч</span></div>
-          <input type="range" id="fw" min="3" max="8" step="0.5" value="6" oninput="calc()">
+          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 часов</span></div>
+          <input type="range" id="fw" min="180" max="480" step="5" value="360" oninput="calc()">
         </div>
 
         <div class="field">
@@ -266,6 +266,8 @@ async function logout(){
 const t2m=s=>{const[h,m]=s.split(':').map(Number);return h*60+m;};
 const m2t=m=>{if(!Number.isFinite(m))return '—';const v=((Math.round(m)%1440)+1440)%1440;return `${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;};
 const fh=m=>{if(!Number.isFinite(m))return '—';const h=Math.floor(m/60),mm=Math.round(m%60);return mm?`${h} ч ${mm} м`:`${h} ч`;};
+const plural=(n,f)=>{const m=n%100,d=n%10;return d===1&&m!==11?f[0]:(d>=2&&d<=4&&(m<12||m>14)?f[1]:f[2]);};
+const hmWords=min=>{const h=Math.floor(min/60),mm=min%60;let s=`${h} ${plural(h,['час','часа','часов'])}`;if(mm)s+=` ${mm} ${plural(mm,['минута','минуты','минут'])}`;return s;};
 
 /* ---------- core calculation ---------- */
 let last=null;
@@ -298,15 +300,15 @@ function getNaps(){
 const napWord=n=>n===1?'дневной сон':(n>=2&&n<=4?'дневных сна':'дневных снов');
 
 function calc(){
-  const wh=parseFloat(document.getElementById('wh').value);
-  const fw=parseFloat(document.getElementById('fw').value);
-  document.getElementById('whVal').textContent=wh.toString().replace(/\.0$/,'')+' ч';
-  document.getElementById('fwVal').textContent=fw.toString().replace(/\.0$/,'')+' ч';
+  const whM=parseInt(document.getElementById('wh').value);
+  const fwM=parseInt(document.getElementById('fw').value);
+  const wh=whM/60, fw=fwM/60;
+  document.getElementById('whVal').textContent=hmWords(whM);
+  document.getElementById('fwVal').textContent=hmWords(fwM);
   const mw=t2m(document.getElementById('mw').value);
   const naps=getNaps();
   const anStr=document.getElementById('an').value;
   const an=anStr?t2m(anStr):null;
-  const whM=wh*60, fwM=fw*60;
 
   const banner=document.getElementById('errBanner');
   function err(t){banner.style.display='flex';document.getElementById('errText').textContent='⚠ '+t;document.getElementById('results').style.opacity='.35';last=null;}
@@ -451,8 +453,8 @@ function drawTimeline(d){
 
 /* ---------- clear inputs to defaults ---------- */
 function clearFields(){
-  document.getElementById('wh').value=12;
-  document.getElementById('fw').value=6;
+  document.getElementById('wh').value=720;
+  document.getElementById('fw').value=360;
   document.getElementById('mw').value='07:00';
   document.getElementById('napCount').value='1';
   document.getElementById('an').value='';
@@ -509,7 +511,7 @@ async function renderHistory(){
   if(!rows.length){el.innerHTML='<div class="hist-empty">Пока нет сохранённых дней.<br>Рассчитайте режим и нажмите «Сохранить в историю».</div>';return;}
   el.innerHTML=rows.map(h=>`
     <div class="hitem fade" onclick="loadRec('${h.date}')">
-      <div class="hdate">${fmtDate(h.date)}<small>${h.nap_count} ${napWord(h.nap_count)} · план ${h.wh} ч</small></div>
+      <div class="hdate">${fmtDate(h.date)}<small>${h.nap_count} ${napWord(h.nap_count)} · план ${fh(h.wh*60)}</small></div>
       <div class="htimes">
         <div class="ht">просыпание<b>${h.mw}</b></div>
         <div class="ht">реком. ночь<b>${h.rec_night}</b></div>
@@ -523,8 +525,8 @@ async function loadRec(date){
   let rows=[];
   try{ rows=await api('GET','/history'); }catch(e){ return; }
   const h=rows.find(x=>x.date===date); if(!h)return;
-  document.getElementById('wh').value=h.wh;
-  document.getElementById('fw').value=h.fw;
+  document.getElementById('wh').value=Math.round(h.wh*60);
+  document.getElementById('fw').value=Math.round(h.fw*60);
   document.getElementById('mw').value=h.mw;
   document.getElementById('napCount').value=h.nap_count||1;
   buildNaps();
