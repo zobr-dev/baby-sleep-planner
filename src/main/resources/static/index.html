@@ -76,11 +76,11 @@
         <p class="ph-sub">Меняйте значения — расчёт обновляется сразу</p>
 
         <div class="slider-field">
-          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое общее бодрствование за день</label><span class="val" id="whVal">12 часов</span></div>
+          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое общее бодрствование за день</label><span class="val" id="whVal">12 ч</span></div>
           <input type="range" id="wh" min="480" max="960" step="5" value="720" oninput="calc()">
         </div>
         <div class="slider-field">
-          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 часов</span></div>
+          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 ч</span></div>
           <input type="range" id="fw" min="180" max="480" step="5" value="360" oninput="calc()">
         </div>
 
@@ -266,8 +266,6 @@ async function logout(){
 const t2m=s=>{const[h,m]=s.split(':').map(Number);return h*60+m;};
 const m2t=m=>{if(!Number.isFinite(m))return '—';const v=((Math.round(m)%1440)+1440)%1440;return `${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;};
 const fh=m=>{if(!Number.isFinite(m))return '—';const h=Math.floor(m/60),mm=Math.round(m%60);return mm?`${h} ч ${mm} м`:`${h} ч`;};
-const plural=(n,f)=>{const m=n%100,d=n%10;return d===1&&m!==11?f[0]:(d>=2&&d<=4&&(m<12||m>14)?f[1]:f[2]);};
-const hmWords=min=>{const h=Math.floor(min/60),mm=min%60;let s=`${h} ${plural(h,['час','часа','часов'])}`;if(mm)s+=` ${mm} ${plural(mm,['минута','минуты','минут'])}`;return s;};
 
 /* ---------- core calculation ---------- */
 let last=null;
@@ -303,8 +301,8 @@ function calc(){
   const whM=parseInt(document.getElementById('wh').value);
   const fwM=parseInt(document.getElementById('fw').value);
   const wh=whM/60, fw=fwM/60;
-  document.getElementById('whVal').textContent=hmWords(whM);
-  document.getElementById('fwVal').textContent=hmWords(fwM);
+  document.getElementById('whVal').textContent=fh(whM);
+  document.getElementById('fwVal').textContent=fh(fwM);
   const mw=t2m(document.getElementById('mw').value);
   const naps=getNaps();
   const anStr=document.getElementById('an').value;
