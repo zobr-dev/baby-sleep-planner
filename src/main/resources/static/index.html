@@ -15,7 +15,7 @@
 <div class="wrap">
   <!-- ===== TOP BAR ===== -->
   <div class="topbar">
-    <div class="brand">
+    <div class="brand" onclick="goHome()" style="cursor:pointer" title="На главную">
       <svg class="logo" viewBox="0 0 100 100" fill="none">
         <defs><radialGradient id="mg" cx="35%" cy="30%"><stop offset="0%" stop-color="#fff7e8"/><stop offset="100%" stop-color="#ffd98e"/></radialGradient></defs>
         <circle cx="50" cy="50" r="46" fill="rgba(185,167,240,.12)" stroke="rgba(185,167,240,.35)"/>
@@ -487,11 +487,15 @@ async function submitFirstChild(){
 function renderChildren(){
   const el=document.getElementById('accChildren');
   if(!children.length){ el.innerHTML='<div class="acc-empty">Пока нет добавленных детей.</div>'; return; }
-  el.innerHTML=children.map(c=>`
+  el.innerHTML=children.map(c=>{
+    const age=ageFromBirth(c.birthDate);
+    const info=c.birthDate?(fmtDate(c.birthDate)+(age?' · '+age:'')):'дата рождения не указана';
+    return `
     <div class="child-row">
-      <div class="child-info"><b>${esc(c.name)}</b><small>${esc(ageFromBirth(c.birthDate)||'возраст не указан')}</small></div>
+      <div class="child-info"><b>${esc(c.name)}</b><small>${esc(info)}</small></div>
       <button class="hdel" onclick="deleteChild(${c.id})" title="Удалить ребёнка">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 async function addChild(){
   const name=document.getElementById('newChildName').value.trim();
@@ -555,6 +559,18 @@ function closeAccount(){
   document.getElementById('accountStage').style.display='none';
   if(!children.length){ showChildGate(); }
   else { document.getElementById('app').style.display='block'; }
+}
+/* Клик по заголовку — вернуться на главную (к расчёту). */
+function goHome(){
+  if(!currentUser) return; // не залогинен — остаёмся на экране входа
+  document.getElementById('accountStage').style.display='none';
+  if(children.length){
+    document.getElementById('childGate').style.display='none';
+    document.getElementById('app').style.display='block';
+  }else{
+    showChildGate();
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 async function saveEmail(){
