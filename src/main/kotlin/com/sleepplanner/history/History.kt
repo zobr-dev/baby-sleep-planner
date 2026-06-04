@@ -10,12 +10,15 @@ import java.time.Instant
 
 /**
  * Запись истории расчёта за конкретный день.
- * Уникальность по (user_id, date) обеспечивает upsert «одна запись на день».
+ * Уникальность по (user_id, child_id, date) обеспечивает upsert «одна запись
+ * на день для ребёнка». child_id допускает null для записей из старой схемы —
+ * они привязываются к первому добавленному ребёнку при обновлении (см.
+ * ChildController) и автоматически вычищаются миграцией ограничения.
  */
 @Entity
 @Table(
     name = "history",
-    uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "date"])]
+    uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "child_id", "date"])]
 )
 class HistoryEntry(
     @Id
@@ -24,6 +27,9 @@ class HistoryEntry(
 
     @Column(name = "user_id", nullable = false)
     var userId: Long = 0,
+
+    @Column(name = "child_id")
+    var childId: Long? = null,
 
     @Column(nullable = false)
     var date: String = "",
@@ -70,11 +76,28 @@ interface HistoryRepository : JpaRepository<HistoryEntry, Long> {
     fun findByUserIdOrderByDateDesc(userId: Long): List<HistoryEntry>
     fun findByUserIdAndDate(userId: Long, date: String): HistoryEntry?
 
+    // Запросы с учётом ребёнка (новая схема).
+    fun findByUserIdAndChildIdOrderByDateDesc(userId: Long, childId: Long): List<HistoryEntry>
+    fun findByUserIdAndChildIdAndDate(userId: Long, childId: Long, date: String): HistoryEntry?
+
     @Transactional
     fun deleteByUserIdAndDate(userId: Long, date: String)
+
+    @Transactional
+    fun deleteByUserIdAndChildIdAndDate(userId: Long, childId: Long, date: String)
 
     @Modifying
     @Transactional
     @Query("DELETE FROM HistoryEntry h WHERE h.userId = :uid AND h.date < :cutoff")
     fun deleteOlderThan(@Param("uid") uid: Long, @Param("cutoff") cutoff: String)
+
+    /** Привязывает старые записи без ребёнка к указанному ребёнку (миграция). */
+    @Modifying
+    @Transactional
+    @Query("UPDATE HistoryEntry h SET h.childId = :cid WHERE h.userId = :uid AND h.childId IS NULL")
+    fun assignChildless(@Param("uid") uid: Long, @Param("cid") cid: Long): Int
+
+    /** Удаляет всю историю ребёнка (при удалении ребёнка). */
+    @Transactional
+    fun deleteByUserIdAndChildId(userId: Long, childId: Long)
 }

@@ -28,6 +28,7 @@
     </div>
     <div class="who" id="whoBox" style="display:none">
       <span>Привет, <b id="whoName"></b></span>
+      <select id="childSelect" class="child-select" onchange="switchChild(this.value)" style="display:none"></select>
       <button class="btn btn-ghost" onclick="openAccount()">Аккаунт</button>
       <button class="btn btn-ghost" onclick="logout()">Выйти</button>
     </div>
@@ -76,6 +77,24 @@
         <a onclick="setMode('forgot')">Забыли пароль?</a>
       </div>
       <p class="note">Учётные записи и история хранятся на сервере. Пароли не хранятся в открытом виде — только криптографический хеш.</p>
+    </div>
+  </div>
+
+  <!-- ===== CHILD GATE (первый ребёнок) ===== -->
+  <div class="auth-stage" id="childGate" style="display:none">
+    <div class="auth-card fade" style="max-width:460px">
+      <h2>Добавьте ребёнка</h2>
+      <p class="sub">Расчёты и история ведутся по каждому ребёнку отдельно. Если у вас уже есть сохранённая история — она привяжется к этому ребёнку.</p>
+      <div class="field">
+        <label>Имя</label>
+        <input id="gateChildName" type="text" placeholder="например, Арсений" maxlength="40">
+      </div>
+      <div class="field">
+        <label>Дата рождения <span class="opt">— необязательно</span></label>
+        <input id="gateChildBirth" type="date" lang="ru-RU">
+      </div>
+      <button class="btn btn-primary" onclick="submitFirstChild()">Добавить</button>
+      <div class="msg" id="childGateMsg"></div>
     </div>
   </div>
 
@@ -206,6 +225,21 @@
       <div class="acc-row"><span class="k">Дата регистрации</span><span class="v" id="accCreated">—</span></div>
 
       <div class="acc-sec">
+        <h3>Дети</h3>
+        <div id="accChildren"></div>
+        <div class="field" style="margin-top:14px">
+          <label>Имя</label>
+          <input id="newChildName" type="text" placeholder="Имя ребёнка" maxlength="40">
+        </div>
+        <div class="field">
+          <label>Дата рождения <span class="opt">— необязательно</span></label>
+          <input id="newChildBirth" type="date" lang="ru-RU">
+        </div>
+        <button class="btn btn-primary" onclick="addChild()">Добавить ребёнка</button>
+        <div class="msg" id="accChildMsg"></div>
+      </div>
+
+      <div class="acc-sec">
         <h3>E-mail</h3>
         <div class="field">
           <label>Адрес для восстановления пароля</label>
@@ -267,6 +301,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 
 /* ---------- auth ---------- */
 let mode='login', currentUser=null;
+let children=[], currentChildId=null;
 const AUTH_TEXT={
   login:   ['Вход','Войдите, чтобы рассчитать режим и сохранять историю по дням','Войти'],
   register:['Создать аккаунт','Зарегистрируйтесь, чтобы сохранять историю расчётов','Зарегистрироваться'],
@@ -349,25 +384,142 @@ async function startSession(u){
   currentUser=u;
   document.getElementById('authStage').style.display='none';
   document.getElementById('accountStage').style.display='none';
-  document.getElementById('app').style.display='block';
+  document.getElementById('childGate').style.display='none';
   document.getElementById('whoBox').style.display='flex';
   document.getElementById('whoName').textContent=u;
+  await loadChildren();
+  if(!children.length){ showChildGate(); return; }
+  pickCurrentChild();
+  enterApp();
+}
+/* Показ основного приложения для выбранного ребёнка. */
+function enterApp(){
+  document.getElementById('childGate').style.display='none';
+  document.getElementById('app').style.display='block';
   const d=new Date();document.getElementById('histDate').value=d.toISOString().slice(0,10);
+  populateChildSelect();
   buildNaps();
   calc();
-  await renderHistory();
+  renderHistory();
 }
 async function logout(){
   try{ await api('POST','/logout'); }catch(e){}
-  currentUser=null;
+  currentUser=null; children=[]; currentChildId=null;
   document.getElementById('app').style.display='none';
   document.getElementById('accountStage').style.display='none';
+  document.getElementById('childGate').style.display='none';
+  document.getElementById('childSelect').style.display='none';
   document.getElementById('whoBox').style.display='none';
   document.getElementById('authStage').style.display='flex';
   document.getElementById('loginPass').value='';
   document.getElementById('loginPass2').value='';
   document.getElementById('loginCode').value='';
   setMode('login');
+}
+
+/* ---------- children ---------- */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function plural(n,one,few,many){
+  const m10=n%10,m100=n%100;
+  if(m10===1&&m100!==11) return one;
+  if(m10>=2&&m10<=4&&(m100<10||m100>=20)) return few;
+  return many;
+}
+/* Дата рождения → возраст словами: «1 год 3 мес». */
+function ageFromBirth(iso){
+  if(!iso) return '';
+  const b=new Date(iso); if(isNaN(b.getTime())) return '';
+  const now=new Date();
+  let months=(now.getFullYear()-b.getFullYear())*12+(now.getMonth()-b.getMonth());
+  if(now.getDate()<b.getDate()) months--;
+  if(months<0) return '';
+  if(months<1) return 'меньше месяца';
+  const y=Math.floor(months/12), m=months%12, parts=[];
+  if(y>0) parts.push(y+' '+plural(y,'год','года','лет'));
+  if(m>0) parts.push(m+' '+plural(m,'месяц','месяца','месяцев'));
+  return parts.join(' ');
+}
+function childLabel(c){ const a=ageFromBirth(c.birthDate); return c.name+(a?' · '+a:''); }
+
+async function loadChildren(){
+  try{ children=await api('GET','/children'); }catch(e){ children=[]; }
+  return children;
+}
+function pickCurrentChild(){
+  const saved=localStorage.getItem('child:'+currentUser);
+  if(saved && children.some(c=>String(c.id)===String(saved))) currentChildId=saved;
+  else if(children.length) currentChildId=String(children[0].id);
+  else currentChildId=null;
+}
+function populateChildSelect(){
+  const sel=document.getElementById('childSelect');
+  if(!children.length){ sel.style.display='none'; sel.innerHTML=''; return; }
+  sel.style.display='';
+  sel.innerHTML=children.map(c=>`<option value="${c.id}">${esc(childLabel(c))}</option>`).join('');
+  if(currentChildId) sel.value=currentChildId;
+}
+async function switchChild(id){
+  currentChildId=String(id);
+  localStorage.setItem('child:'+currentUser,currentChildId);
+  await renderHistory();
+}
+function showChildGate(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('accountStage').style.display='none';
+  document.getElementById('childGate').style.display='flex';
+  document.getElementById('gateChildName').value='';
+  document.getElementById('gateChildBirth').value='';
+  setMsg2('childGateMsg','');
+}
+async function submitFirstChild(){
+  const name=document.getElementById('gateChildName').value.trim();
+  const birth=document.getElementById('gateChildBirth').value;
+  if(name.length<1){setMsg2('childGateMsg','Укажите имя ребёнка','err');return;}
+  try{
+    const c=await api('POST','/children',{name,birthDate:birth||null});
+    await loadChildren();
+    currentChildId=String(c.id);
+    localStorage.setItem('child:'+currentUser,currentChildId);
+    enterApp();
+  }catch(e){ setMsg2('childGateMsg',e.message,'err'); }
+}
+/* Список детей на странице аккаунта. */
+function renderChildren(){
+  const el=document.getElementById('accChildren');
+  if(!children.length){ el.innerHTML='<div class="acc-empty">Пока нет добавленных детей.</div>'; return; }
+  el.innerHTML=children.map(c=>`
+    <div class="child-row">
+      <div class="child-info"><b>${esc(c.name)}</b><small>${esc(ageFromBirth(c.birthDate)||'возраст не указан')}</small></div>
+      <button class="hdel" onclick="deleteChild(${c.id})" title="Удалить ребёнка">✕</button>
+    </div>`).join('');
+}
+async function addChild(){
+  const name=document.getElementById('newChildName').value.trim();
+  const birth=document.getElementById('newChildBirth').value;
+  if(name.length<1){setMsg2('accChildMsg','Укажите имя ребёнка','err');return;}
+  try{
+    const c=await api('POST','/children',{name,birthDate:birth||null});
+    document.getElementById('newChildName').value='';
+    document.getElementById('newChildBirth').value='';
+    await loadChildren();
+    if(!currentChildId){ currentChildId=String(c.id); localStorage.setItem('child:'+currentUser,currentChildId); }
+    renderChildren(); populateChildSelect();
+    setMsg2('accChildMsg','Ребёнок добавлен','ok');
+  }catch(e){ setMsg2('accChildMsg',e.message,'err'); }
+}
+async function deleteChild(id){
+  if(!confirm('Удалить ребёнка и всю его историю расчётов?')) return;
+  try{
+    await api('DELETE','/children/'+id);
+    await loadChildren();
+    if(String(currentChildId)===String(id)){
+      currentChildId=children.length?String(children[0].id):null;
+      if(currentChildId) localStorage.setItem('child:'+currentUser,currentChildId);
+      else localStorage.removeItem('child:'+currentUser);
+    }
+    renderChildren(); populateChildSelect();
+    setMsg2('accChildMsg','Ребёнок удалён','ok');
+  }catch(e){ setMsg2('accChildMsg',e.message,'err'); }
 }
 
 /* ---------- account ---------- */
@@ -387,6 +539,10 @@ async function openAccount(){
   document.getElementById('accCurPass').value='';
   document.getElementById('accNewPass').value='';
   document.getElementById('accNewPass2').value='';
+  setMsg2('accChildMsg','');
+  document.getElementById('newChildName').value='';
+  document.getElementById('newChildBirth').value='';
+  renderChildren();
   try{
     const a=await api('GET','/account');
     document.getElementById('accUser').textContent=a.username||'—';
@@ -397,7 +553,8 @@ async function openAccount(){
 }
 function closeAccount(){
   document.getElementById('accountStage').style.display='none';
-  document.getElementById('app').style.display='block';
+  if(!children.length){ showChildGate(); }
+  else { document.getElementById('app').style.display='block'; }
 }
 
 async function saveEmail(){
@@ -629,14 +786,17 @@ function clearFields(){
 /* ---------- history ---------- */
 async function saveCalc(){
   if(!last){toast('Сначала исправьте параметры');return;}
+  if(!currentChildId){toast('Сначала добавьте ребёнка');return;}
   const date=document.getElementById('histDate').value;
   if(!date){toast('Выберите дату');return;}
   try{
-    const res=await api('POST','/history',Object.assign({date},last));
+    const res=await api('POST','/history',Object.assign({date,childId:Number(currentChildId)},last));
     toast(res.updated?'Запись за '+fmtDate(date)+' обновлена':'Сохранено в историю');
     await renderHistory();
   }catch(e){ toast(e.message); }
 }
+/* Текущий хвост запроса с привязкой к выбранному ребёнку. */
+function childQuery(){ return currentChildId?('?childId='+encodeURIComponent(currentChildId)):''; }
 function dStr(offsetDays){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-offsetDays);return d.toISOString().slice(0,10);}
 /* Средние за период: общее бодрствование (факт, иначе план) и ночной сон. */
 function periodStats(rows,days){
@@ -680,7 +840,7 @@ function renderMetrics(){
 }
 async function renderHistory(){
   let rows=[];
-  try{ rows=await api('GET','/history'); }catch(e){ rows=[]; }
+  try{ rows=await api('GET','/history'+childQuery()); }catch(e){ rows=[]; }
   histRows=rows;
   renderMetrics();
   document.getElementById('histCap').textContent =
@@ -702,7 +862,7 @@ async function renderHistory(){
 }
 async function loadRec(date){
   let rows=[];
-  try{ rows=await api('GET','/history'); }catch(e){ return; }
+  try{ rows=await api('GET','/history'+childQuery()); }catch(e){ return; }
   const h=rows.find(x=>x.date===date); if(!h)return;
   document.getElementById('wh').value=Math.round(h.wh*60);
   document.getElementById('fw').value=Math.round(h.fw*60);
@@ -718,7 +878,7 @@ async function loadRec(date){
   toast('Загружен расчёт за '+fmtDate(date));
 }
 async function delRec(date){
-  try{ await api('DELETE','/history/'+encodeURIComponent(date)); toast('Запись удалена'); }
+  try{ await api('DELETE','/history/'+encodeURIComponent(date)+childQuery()); toast('Запись удалена'); }
   catch(e){ toast(e.message); }
   await renderHistory();
 }

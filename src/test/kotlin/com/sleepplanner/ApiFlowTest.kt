@@ -1,5 +1,6 @@
 package com.sleepplanner
 
+import com.sleepplanner.child.ChildRepository
 import com.sleepplanner.history.HistoryEntry
 import com.sleepplanner.history.HistoryRepository
 import com.sleepplanner.user.UserRepository
@@ -36,6 +37,7 @@ class ApiFlowTest : FeatureSpec() {
     @Autowired lateinit var mvc: MockMvc
     @Autowired lateinit var users: UserRepository
     @Autowired lateinit var history: HistoryRepository
+    @Autowired lateinit var childrenRepo: ChildRepository
 
     override fun extensions() = listOf(SpringExtension)
 
@@ -50,21 +52,36 @@ class ApiFlowTest : FeatureSpec() {
         return session
     }
 
+    /** Создаёт ребёнка через API и возвращает его id. */
+    private fun addChild(session: MockHttpSession, name: String = "Малыш"): Long {
+        val body = mvc.perform(
+            post("/api/children").session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name":"$name"}""")
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+        return Regex("\"id\":(\\d+)").find(body)!!.groupValues[1].toLong()
+    }
+
     private fun saveBody(
         date: String,
         an: String = "21:30",
-        naps: String = """[{"s":"13:00","e":"15:00"}]"""
-    ) = """
-        {"date":"$date","wh":12,"fw":6,"mw":"07:00","napCount":1,
+        naps: String = """[{"s":"13:00","e":"15:00"}]""",
+        childId: Long? = null
+    ): String {
+        val childLine = if (childId != null) "\"childId\":$childId," else ""
+        return """
+        {"date":"$date",${childLine}"wh":12,"fw":6,"mw":"07:00","napCount":1,
          "naps":$naps,"napTotal":120,
          "recFirst":"13:00","recNight":"21:00","an":"$an","actWakeM":750,
          "firstWindowM":360,"eveWindowM":390,"nightDurM":570}
-    """.trimIndent()
+        """.trimIndent()
+    }
 
     init {
         // Чистая БД перед каждым сценарием — изоляция тестов.
         beforeTest {
             history.deleteAll()
+            childrenRepo.deleteAll()
             users.deleteAll()
         }
 
@@ -337,6 +354,128 @@ class ApiFlowTest : FeatureSpec() {
                         .content("""{"currentPassword":"wrong","newPassword":"newpass"}""")
                 ).andExpect(status().isUnauthorized)
                     .andExpect(jsonPath("$.error").value("Неверный текущий пароль"))
+            }
+        }
+
+        feature("Дети") {
+            scenario("создание ребёнка и список") {
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/children").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"name":"Арсений","birthDate":"2025-01-15"}""")
+                ).andExpect(status().isOk)
+                    .andExpect(jsonPath("$.name").value("Арсений"))
+                    .andExpect(jsonPath("$.birthDate").value("2025-01-15"))
+
+                mvc.perform(get("/api/children").session(s))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].name").value("Арсений"))
+            }
+
+            scenario("ребёнок без имени → 400") {
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/children").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"name":"   "}""")
+                ).andExpect(status().isBadRequest)
+                    .andExpect(jsonPath("$.error").value("Укажите имя ребёнка"))
+            }
+
+            scenario("некорректная дата рождения → 400") {
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/children").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"name":"Арсений","birthDate":"15.01.2025"}""")
+                ).andExpect(status().isBadRequest)
+                    .andExpect(jsonPath("$.error").value("Некорректная дата рождения"))
+            }
+
+            scenario("GET /children без сессии → 401") {
+                mvc.perform(get("/api/children"))
+                    .andExpect(status().isUnauthorized)
+            }
+
+            scenario("первый ребёнок забирает старую историю без привязки (миграция)") {
+                val s = register("mama")
+                val uid = users.findByUsername("mama")!!.id!!
+                // запись из старой схемы — без child_id
+                history.save(HistoryEntry(userId = uid, date = "2026-06-02"))
+
+                val cid = addChild(s, "Арсений")
+
+                mvc.perform(get("/api/history").session(s).param("childId", cid.toString()))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].child_id").value(cid.toInt()))
+            }
+
+            scenario("история разводится по детям") {
+                val s = register("mama")
+                val a = addChild(s, "Арсений")
+                val b = addChild(s, "Мира")
+
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = a))
+                ).andExpect(status().isOk)
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = b))
+                ).andExpect(status().isOk)
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-03", childId = b))
+                ).andExpect(status().isOk)
+
+                mvc.perform(get("/api/history").session(s).param("childId", a.toString()))
+                    .andExpect(jsonPath("$.length()").value(1))
+                mvc.perform(get("/api/history").session(s).param("childId", b.toString()))
+                    .andExpect(jsonPath("$.length()").value(2))
+            }
+
+            scenario("нельзя читать историю чужого ребёнка → 403") {
+                val mama = register("mama")
+                val papa = register("papa")
+                val papaChild = addChild(papa, "Чужой")
+
+                mvc.perform(get("/api/history").session(mama).param("childId", papaChild.toString()))
+                    .andExpect(status().isForbidden)
+                    .andExpect(jsonPath("$.error").value("Нет доступа к этому ребёнку"))
+            }
+
+            scenario("удаление ребёнка уносит его историю") {
+                val s = register("mama")
+                val cid = addChild(s, "Арсений")
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = cid))
+                ).andExpect(status().isOk)
+
+                mvc.perform(delete("/api/children/$cid").session(s))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.ok").value(true))
+
+                childrenRepo.findByUserIdOrderByCreatedAtAsc(users.findByUsername("mama")!!.id!!).size shouldBe 0
+                history.findByUserIdOrderByDateDesc(users.findByUsername("mama")!!.id!!).size shouldBe 0
+            }
+
+            scenario("один день для двух детей сохраняется без конфликта уникальности") {
+                val s = register("mama")
+                val a = addChild(s, "Арсений")
+                val b = addChild(s, "Мира")
+                // тот же день, оба ребёнка — обе записи должны существовать
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = a))
+                ).andExpect(status().isOk).andExpect(jsonPath("$.updated").value(false))
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = b))
+                ).andExpect(status().isOk).andExpect(jsonPath("$.updated").value(false))
             }
         }
 
