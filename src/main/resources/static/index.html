@@ -371,10 +371,12 @@ async function logout(){
 }
 
 /* ---------- account ---------- */
-function fmtDate(iso){
+/* ISO-метка времени (createdAt) → dd/mm/yyyy. */
+function fmtAccDate(iso){
   const d=new Date(iso);
   if(isNaN(d.getTime())) return iso||'—';
-  return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});
+  const p=n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}`;
 }
 function setMsg2(id,m,type){const e=document.getElementById(id);e.textContent=m||'';e.className='msg '+(type||'');}
 
@@ -389,7 +391,7 @@ async function openAccount(){
     const a=await api('GET','/account');
     document.getElementById('accUser').textContent=a.username||'—';
     document.getElementById('accEmailView').textContent=a.email||'не указан';
-    document.getElementById('accCreated').textContent=a.createdAt?fmtDate(a.createdAt):'—';
+    document.getElementById('accCreated').textContent=a.createdAt?fmtAccDate(a.createdAt):'—';
     document.getElementById('accEmail').value=a.email||'';
   }catch(e){ setMsg2('accEmailMsg',e.message,'err'); }
 }
@@ -639,15 +641,16 @@ function dStr(offsetDays){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.get
 /* Средние за период: общее бодрствование (факт, иначе план) и ночной сон. */
 function periodStats(rows,days){
   const from=dStr(days-1), to=dStr(0);
-  let ws=0,wn=0,ns=0,nn=0;
+  let ws=0,wn=0,ns=0,nn=0,ds=0,dn=0;
   rows.forEach(h=>{
     if(h.date>=from && h.date<=to){
       const w=(h.actual_wake_m!=null)?h.actual_wake_m:(h.wh!=null?h.wh*60:null);
       if(w!=null){ws+=w;wn++;}
       if(h.night_dur_m!=null){ns+=h.night_dur_m;nn++;}
+      if(h.nap_total_m!=null){ds+=h.nap_total_m;dn++;}
     }
   });
-  return {wakeAvg:wn?ws/wn:null,wakeN:wn,nightAvg:nn?ns/nn:null,nightN:nn};
+  return {wakeAvg:wn?ws/wn:null,wakeN:wn,nightAvg:nn?ns/nn:null,nightN:nn,dayAvg:dn?ds/dn:null,dayN:dn};
 }
 let histPeriod=7, histRows=[];
 function setHistPeriod(d){
@@ -663,6 +666,11 @@ function renderMetrics(){
       <div class="hm-lbl">🌙 Средний ночной сон</div>
       <div class="hm-val">${s.nightAvg!=null?fh(s.nightAvg):'—'}</div>
       <div class="hm-sub">${sub(s.nightN)}</div>
+    </div>
+    <div class="hmetric">
+      <div class="hm-lbl">😴 Средний дневной сон</div>
+      <div class="hm-val">${s.dayAvg!=null?fh(s.dayAvg):'—'}</div>
+      <div class="hm-sub">${sub(s.dayN)}</div>
     </div>
     <div class="hmetric">
       <div class="hm-lbl">☀️ Среднее бодрствование</div>
