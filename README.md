@@ -83,6 +83,15 @@ IDE сама подтянет зависимости и предложит за�
 | `JPA_DDL_AUTO`             | стратегия схемы (`update`/`validate`)   | `update`     |
 | `SESSION_COOKIE_SECURE`    | флаг Secure для cookie (за HTTPS — `true`) | `false`   |
 | `PORT`                     | порт приложения                         | `8080`       |
+| `MAIL_ENABLED`             | включить реальную отправку писем (код сброса) | `false` |
+| `MAIL_FROM`                | адрес отправителя писем                 | `no-reply@baby-sleep-planner.ru` |
+| `SMTP_HOST`                | хост SMTP-сервера                       | _(пусто)_    |
+| `SMTP_PORT`                | порт SMTP                               | `587`        |
+| `SMTP_USERNAME`            | логин SMTP                              | _(пусто)_    |
+| `SMTP_PASSWORD`            | пароль SMTP                             | _(пусто)_    |
+
+> Если `MAIL_ENABLED=false` или SMTP не настроен, код сброса пароля не отправляется
+> по почте, а выводится в лог приложения (удобно для локальной разработки).
 
 ## Тесты
 
@@ -98,9 +107,11 @@ IDE сама подтянет зависимости и предложит за�
 
 | Метод  | Путь                  | Назначение                          |
 |--------|-----------------------|-------------------------------------|
-| POST   | `/api/register`       | регистрация `{username, password}`  |
+| POST   | `/api/register`       | регистрация `{username, email, password}` |
 | POST   | `/api/login`          | вход `{username, password}`         |
 | POST   | `/api/logout`         | выход (инвалидация сессии)          |
+| POST   | `/api/password/forgot`| запрос кода сброса `{email}`        |
+| POST   | `/api/password/reset` | сброс пароля `{email, code, password}` |
 | GET    | `/api/me`             | текущий пользователь                |
 | GET    | `/api/history`        | список записей (+ очистка 90 дней)  |
 | POST   | `/api/history`        | сохранить/обновить запись за дату   |

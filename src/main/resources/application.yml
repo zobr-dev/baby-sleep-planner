@@ -27,6 +27,21 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: false
     open-in-view: false
+  # SMTP для писем со сбросом пароля. Если SMTP_HOST не задан и MAIL_ENABLED=false,
+  # код сброса не отправляется, а пишется в лог (удобно для разработки).
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: "true"
+      mail.smtp.starttls.enable: "true"
+
+app:
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:no-reply@baby-sleep-planner.ru}
 
 logging:
   level:

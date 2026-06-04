@@ -28,6 +28,7 @@
     </div>
     <div class="who" id="whoBox" style="display:none">
       <span>Привет, <b id="whoName"></b></span>
+      <button class="btn btn-ghost" onclick="openAccount()">Аккаунт</button>
       <button class="btn btn-ghost" onclick="logout()">Выйти</button>
     </div>
   </div>
@@ -44,12 +45,20 @@
       <h2 id="authTitle">Вход</h2>
       <p class="sub" id="authSub">Войдите, чтобы рассчитать режим и сохранять историю по дням</p>
 
-      <div class="field">
+      <div class="field" id="userField">
         <label>Логин</label>
         <input id="loginUser" type="text" placeholder="например, mama_arseniya" autocomplete="username">
       </div>
-      <div class="field">
-        <label>Пароль</label>
+      <div class="field" id="emailField" style="display:none">
+        <label>E-mail</label>
+        <input id="loginEmail" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field" id="codeField" style="display:none">
+        <label>Код из письма</label>
+        <input id="loginCode" type="text" inputmode="numeric" maxlength="6" placeholder="6 цифр" autocomplete="one-time-code">
+      </div>
+      <div class="field" id="passField">
+        <label id="passLabel">Пароль</label>
         <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
       <div class="field" id="confirmField" style="display:none">
@@ -61,7 +70,10 @@
       <div class="msg" id="authMsg"></div>
 
       <div class="switcher" id="switcher">
-        Ещё нет аккаунта? <a onclick="toggleMode()">Зарегистрироваться</a>
+        Ещё нет аккаунта? <a onclick="setMode('register')">Зарегистрироваться</a>
+      </div>
+      <div class="switcher" id="forgotLink">
+        <a onclick="setMode('forgot')">Забыли пароль?</a>
       </div>
       <p class="note">Учётные записи и история хранятся на сервере. Пароли не хранятся в открытом виде — только криптографический хеш.</p>
     </div>
@@ -178,6 +190,48 @@
       <div id="histList"></div>
     </div>
   </div>
+
+  <!-- ===== ACCOUNT ===== -->
+  <div class="auth-stage" id="accountStage" style="display:none">
+    <div class="auth-card fade" style="max-width:480px">
+      <h2>Аккаунт</h2>
+      <p class="sub">Ваши данные и настройки входа</p>
+
+      <div class="acc-row"><span class="k">Логин</span><span class="v" id="accUser">—</span></div>
+      <div class="acc-row"><span class="k">E-mail</span><span class="v" id="accEmailView">—</span></div>
+      <div class="acc-row"><span class="k">Дата регистрации</span><span class="v" id="accCreated">—</span></div>
+
+      <div class="acc-sec">
+        <h3>E-mail</h3>
+        <div class="field">
+          <label>Адрес для восстановления пароля</label>
+          <input id="accEmail" type="email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <button class="btn btn-primary" onclick="saveEmail()">Сохранить e-mail</button>
+        <div class="msg" id="accEmailMsg"></div>
+      </div>
+
+      <div class="acc-sec">
+        <h3>Изменить пароль</h3>
+        <div class="field">
+          <label>Текущий пароль</label>
+          <input id="accCurPass" type="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div class="field">
+          <label>Новый пароль</label>
+          <input id="accNewPass" type="password" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label>Повторите новый пароль</label>
+          <input id="accNewPass2" type="password" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary" onclick="changePassword()">Изменить пароль</button>
+        <div class="msg" id="accPassMsg"></div>
+      </div>
+
+      <div class="switcher"><a onclick="closeAccount()">← Вернуться к расчёту</a></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -209,30 +263,54 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 
 /* ---------- auth ---------- */
 let mode='login', currentUser=null;
-function toggleMode(){
-  mode=mode==='login'?'register':'login';
-  document.getElementById('confirmField').style.display=mode==='register'?'block':'none';
-  document.getElementById('authTitle').textContent=mode==='register'?'Создать аккаунт':'Вход';
-  document.getElementById('authSub').textContent=mode==='register'?'Зарегистрируйтесь, чтобы сохранять историю расчётов':'Войдите, чтобы рассчитать режим и сохранять историю по дням';
-  document.getElementById('authBtn').textContent=mode==='register'?'Зарегистрироваться':'Войти';
-  document.getElementById('switcher').innerHTML=mode==='register'
-    ? 'Уже есть аккаунт? <a onclick="toggleMode()">Войти</a>'
-    : 'Ещё нет аккаунта? <a onclick="toggleMode()">Зарегистрироваться</a>';
+const AUTH_TEXT={
+  login:   ['Вход','Войдите, чтобы рассчитать режим и сохранять историю по дням','Войти'],
+  register:['Создать аккаунт','Зарегистрируйтесь, чтобы сохранять историю расчётов','Зарегистрироваться'],
+  forgot:  ['Сброс пароля','Укажите e-mail аккаунта — пришлём код для сброса','Отправить код'],
+  reset:   ['Новый пароль','Введите код из письма и задайте новый пароль','Сбросить пароль']
+};
+function setMode(m){
+  mode=m;
+  const show=(id,on)=>document.getElementById(id).style.display=on?'block':'none';
+  show('userField',  m==='login'||m==='register');
+  show('emailField', m==='register'||m==='forgot'||m==='reset');
+  show('codeField',  m==='reset');
+  show('passField',  m==='login'||m==='register'||m==='reset');
+  show('confirmField', m==='register'||m==='reset');
+  show('forgotLink', m==='login');
+
+  const t=AUTH_TEXT[m];
+  document.getElementById('authTitle').textContent=t[0];
+  document.getElementById('authSub').textContent=t[1];
+  document.getElementById('authBtn').textContent=t[2];
+  document.getElementById('passLabel').textContent=m==='reset'?'Новый пароль':'Пароль';
+  document.getElementById('loginPass').setAttribute('autocomplete', m==='login'?'current-password':'new-password');
+
+  const sw=document.getElementById('switcher');
+  if(m==='login')        sw.innerHTML='Ещё нет аккаунта? <a onclick="setMode(\'register\')">Зарегистрироваться</a>';
+  else if(m==='register')sw.innerHTML='Уже есть аккаунт? <a onclick="setMode(\'login\')">Войти</a>';
+  else                   sw.innerHTML='Вспомнили пароль? <a onclick="setMode(\'login\')">Войти</a>';
   setMsg('');
 }
 function setMsg(m,type){const e=document.getElementById('authMsg');e.textContent=m||'';e.className='msg '+(type||'');}
 
 async function submitAuth(){
-  const u=document.getElementById('loginUser').value.trim().toLowerCase();
-  const p=document.getElementById('loginPass').value;
-  if(!u||!p){setMsg('Введите логин и пароль','err');return;}
-  if(u.length<3){setMsg('Логин — минимум 3 символа','err');return;}
   try{
+    if(mode==='forgot') return await submitForgot();
+    if(mode==='reset')  return await submitReset();
+
+    const u=document.getElementById('loginUser').value.trim().toLowerCase();
+    const p=document.getElementById('loginPass').value;
+    if(!u||!p){setMsg('Введите логин и пароль','err');return;}
+    if(u.length<3){setMsg('Логин — минимум 3 символа','err');return;}
+
     if(mode==='register'){
+      const email=document.getElementById('loginEmail').value.trim().toLowerCase();
       const p2=document.getElementById('loginPass2').value;
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg('Укажите корректный e-mail','err');return;}
       if(p.length<4){setMsg('Пароль — минимум 4 символа','err');return;}
       if(p!==p2){setMsg('Пароли не совпадают','err');return;}
-      const res=await api('POST','/register',{username:u,password:p});
+      const res=await api('POST','/register',{username:u,password:p,email});
       setMsg('Аккаунт создан!','ok');
       await startSession(res.username);
     }else{
@@ -242,9 +320,31 @@ async function submitAuth(){
   }catch(e){ setMsg(e.message,'err'); }
 }
 
+async function submitForgot(){
+  const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg('Укажите корректный e-mail','err');return;}
+  await api('POST','/password/forgot',{email});
+  setMode('reset');
+  setMsg('Если такой e-mail зарегистрирован, мы отправили на него код','ok');
+}
+
+async function submitReset(){
+  const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+  const code=document.getElementById('loginCode').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const p2=document.getElementById('loginPass2').value;
+  if(!code){setMsg('Введите код из письма','err');return;}
+  if(p.length<4){setMsg('Пароль — минимум 4 символа','err');return;}
+  if(p!==p2){setMsg('Пароли не совпадают','err');return;}
+  await api('POST','/password/reset',{email,code,password:p});
+  setMode('login');
+  setMsg('Пароль обновлён — войдите с новым паролем','ok');
+}
+
 async function startSession(u){
   currentUser=u;
   document.getElementById('authStage').style.display='none';
+  document.getElementById('accountStage').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('whoBox').style.display='flex';
   document.getElementById('whoName').textContent=u;
@@ -257,9 +357,67 @@ async function logout(){
   try{ await api('POST','/logout'); }catch(e){}
   currentUser=null;
   document.getElementById('app').style.display='none';
+  document.getElementById('accountStage').style.display='none';
   document.getElementById('whoBox').style.display='none';
   document.getElementById('authStage').style.display='flex';
   document.getElementById('loginPass').value='';
+  document.getElementById('loginPass2').value='';
+  document.getElementById('loginCode').value='';
+  setMode('login');
+}
+
+/* ---------- account ---------- */
+function fmtDate(iso){
+  const d=new Date(iso);
+  if(isNaN(d.getTime())) return iso||'—';
+  return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});
+}
+function setMsg2(id,m,type){const e=document.getElementById(id);e.textContent=m||'';e.className='msg '+(type||'');}
+
+async function openAccount(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('accountStage').style.display='flex';
+  setMsg2('accEmailMsg','');setMsg2('accPassMsg','');
+  document.getElementById('accCurPass').value='';
+  document.getElementById('accNewPass').value='';
+  document.getElementById('accNewPass2').value='';
+  try{
+    const a=await api('GET','/account');
+    document.getElementById('accUser').textContent=a.username||'—';
+    document.getElementById('accEmailView').textContent=a.email||'не указан';
+    document.getElementById('accCreated').textContent=a.createdAt?fmtDate(a.createdAt):'—';
+    document.getElementById('accEmail').value=a.email||'';
+  }catch(e){ setMsg2('accEmailMsg',e.message,'err'); }
+}
+function closeAccount(){
+  document.getElementById('accountStage').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+async function saveEmail(){
+  const email=document.getElementById('accEmail').value.trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg2('accEmailMsg','Укажите корректный e-mail','err');return;}
+  try{
+    const r=await api('POST','/account/email',{email});
+    document.getElementById('accEmailView').textContent=r.email;
+    setMsg2('accEmailMsg','E-mail сохранён','ok');
+  }catch(e){ setMsg2('accEmailMsg',e.message,'err'); }
+}
+
+async function changePassword(){
+  const cur=document.getElementById('accCurPass').value;
+  const np=document.getElementById('accNewPass').value;
+  const np2=document.getElementById('accNewPass2').value;
+  if(!cur){setMsg2('accPassMsg','Введите текущий пароль','err');return;}
+  if(np.length<4){setMsg2('accPassMsg','Пароль — минимум 4 символа','err');return;}
+  if(np!==np2){setMsg2('accPassMsg','Пароли не совпадают','err');return;}
+  try{
+    await api('POST','/account/password',{currentPassword:cur,newPassword:np});
+    document.getElementById('accCurPass').value='';
+    document.getElementById('accNewPass').value='';
+    document.getElementById('accNewPass2').value='';
+    setMsg2('accPassMsg','Пароль изменён','ok');
+  }catch(e){ setMsg2('accPassMsg',e.message,'err'); }
 }
 
 /* ---------- time math ---------- */

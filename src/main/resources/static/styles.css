@@ -98,6 +98,16 @@ html{scrollbar-color:rgba(184,167,240,.35) transparent;scrollbar-width:thin}
 .msg{font-size:13px;text-align:center;margin-top:14px;min-height:18px;transition:.2s}
 .msg.err{color:#ff9bb0}.msg.ok{color:var(--mint)}
 
+/* ---------- account ---------- */
+.acc-row{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:11px 2px;border-bottom:1px solid var(--stroke);font-size:14px}
+.acc-row .k{color:var(--muted)}
+.acc-row .v{color:var(--ink);font-weight:500;text-align:right;word-break:break-word}
+.acc-sec{margin-top:24px;padding-top:22px;border-top:1px solid var(--stroke)}
+.acc-sec:first-of-type{margin-top:22px}
+.acc-sec h3{font-family:'Fraunces',serif;font-weight:500;font-size:17px;margin-bottom:15px}
+.acc-sec .btn-primary{width:100%;margin-top:4px}
+
 /* ---------- app layout ---------- */
 #app{display:none}
 .grid{display:grid;grid-template-columns:1fr 1.25fr;gap:22px;align-items:start}
