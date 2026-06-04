@@ -6,7 +6,7 @@ import java.time.Instant
 
 @Entity
 @Table(name = "users")
-class AppUser(
+data class AppUser(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,

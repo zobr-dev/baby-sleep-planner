@@ -20,7 +20,7 @@ import java.time.Instant
     name = "history",
     uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "child_id", "date"])]
 )
-class HistoryEntry(
+data class HistoryEntry(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
