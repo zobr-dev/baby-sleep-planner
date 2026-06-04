@@ -185,6 +185,10 @@
           <p class="ph-sub" style="margin:0">Сохранённые режимы по дням · максимум 90 дней</p>
         </div>
       </div>
+      <div class="hist-tabs" id="histTabs">
+        <button class="htab active" data-days="7" onclick="setHistPeriod(7)">7 дней</button>
+        <button class="htab" data-days="30" onclick="setHistPeriod(30)">30 дней</button>
+      </div>
       <div class="hist-metrics" id="histMetrics"></div>
       <p class="hist-cap" id="histCap"></p>
       <div id="histList"></div>
@@ -632,36 +636,47 @@ async function saveCalc(){
   }catch(e){ toast(e.message); }
 }
 function dStr(offsetDays){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-offsetDays);return d.toISOString().slice(0,10);}
-function avgWake(rows,days){
+/* Средние за период: общее бодрствование (факт, иначе план) и ночной сон. */
+function periodStats(rows,days){
   const from=dStr(days-1), to=dStr(0);
-  let sum=0,n=0;
+  let ws=0,wn=0,ns=0,nn=0;
   rows.forEach(h=>{
     if(h.date>=from && h.date<=to){
-      const w=(h.actual_wake_m!=null)?h.actual_wake_m:h.wh*60; // факт, где есть; иначе план
-      sum+=w;n++;
+      const w=(h.actual_wake_m!=null)?h.actual_wake_m:(h.wh!=null?h.wh*60:null);
+      if(w!=null){ws+=w;wn++;}
+      if(h.night_dur_m!=null){ns+=h.night_dur_m;nn++;}
     }
   });
-  return {avg:n?sum/n:null,n};
+  return {wakeAvg:wn?ws/wn:null,wakeN:wn,nightAvg:nn?ns/nn:null,nightN:nn};
+}
+let histPeriod=7, histRows=[];
+function setHistPeriod(d){
+  histPeriod=d;
+  document.querySelectorAll('#histTabs .htab').forEach(b=>b.classList.toggle('active',+b.dataset.days===d));
+  renderMetrics();
+}
+function renderMetrics(){
+  const s=periodStats(histRows,histPeriod);
+  const sub=n=>n?'по '+n+' дн.':'нет записей';
+  document.getElementById('histMetrics').innerHTML=`
+    <div class="hmetric">
+      <div class="hm-lbl">🌙 Средний ночной сон</div>
+      <div class="hm-val">${s.nightAvg!=null?fh(s.nightAvg):'—'}</div>
+      <div class="hm-sub">${sub(s.nightN)}</div>
+    </div>
+    <div class="hmetric">
+      <div class="hm-lbl">☀️ Среднее бодрствование</div>
+      <div class="hm-val">${s.wakeAvg!=null?fh(s.wakeAvg):'—'}</div>
+      <div class="hm-sub">${sub(s.wakeN)}</div>
+    </div>`;
 }
 async function renderHistory(){
   let rows=[];
   try{ rows=await api('GET','/history'); }catch(e){ rows=[]; }
-
-  // средние показатели общего бодрствования
-  const a7=avgWake(rows,7), a30=avgWake(rows,30);
-  document.getElementById('histMetrics').innerHTML=`
-    <div class="hmetric">
-      <div class="hm-lbl">📊 Среднее бодрствование · 7 дней</div>
-      <div class="hm-val">${a7.avg!=null?fh(a7.avg):'—'}</div>
-      <div class="hm-sub">${a7.n?'усреднено по '+a7.n+' дн.':'нет записей за период'}</div>
-    </div>
-    <div class="hmetric">
-      <div class="hm-lbl">📈 Среднее бодрствование · 30 дней</div>
-      <div class="hm-val">${a30.avg!=null?fh(a30.avg):'—'}</div>
-      <div class="hm-sub">${a30.n?'усреднено по '+a30.n+' дн.':'нет записей за период'}</div>
-    </div>`;
+  histRows=rows;
+  renderMetrics();
   document.getElementById('histCap').textContent =
-    'Учитывается фактическое общее бодрствование, где указан уход в ночь, иначе плановое. Записи старше 90 дней удаляются автоматически.';
+    'Ночной сон — по фактической длительности; бодрствование — факт, где указан уход в ночь, иначе плановое. Записи старше 90 дней удаляются автоматически.';
 
   const el=document.getElementById('histList');
   if(!rows.length){el.innerHTML='<div class="hist-empty">Пока нет сохранённых дней.<br>Рассчитайте режим и нажмите «Сохранить в историю».</div>';return;}
