@@ -741,10 +741,14 @@ function calc(){
   document.getElementById('stEve').textContent=fh(eveWindowM);
   document.getElementById('stNight').textContent=nightDurM>0?fh(nightDurM):'—';
 
-  last=napsComplete?{wh,fw,mw:m2t(mw),napCount:N,
-        naps:naps.map(n=>({s:m2t(n.s),e:m2t(n.e)})),
-        napTotal,recFirst:m2t(recFirst),recNight:m2t(recNight),
-        an:anStr||'',actWakeM,firstWindowM,eveWindowM,nightDurM}:null;
+  // Сохранять можно, даже если заполнен только обязательный утренний подъём.
+  // Незаполненные сны пишем пустыми строками (сохраняя индексы), а суммарный
+  // дневной сон не фиксируем (null), чтобы оценочная длительность не искажала
+  // средние в истории.
+  last={wh,fw,mw:m2t(mw),napCount:N,
+        naps:naps.map(n=>({s:Number.isFinite(n.s)?m2t(n.s):'',e:Number.isFinite(n.e)?m2t(n.e):''})),
+        napTotal:napsComplete?napTotal:null,recFirst:m2t(recFirst),recNight:m2t(recNight),
+        an:anStr||'',actWakeM,firstWindowM,eveWindowM,nightDurM};
   drawTimeline({mw,naps:(napsComplete?naps:recNaps),recFirst,recNight,nightAbs:effNightAbs,anGiven:an!=null});
 }
 
