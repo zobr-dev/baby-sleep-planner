@@ -116,7 +116,7 @@
         </div>
 
         <div class="field">
-          <label>Фактическое время утреннего подъема</label>
+          <label>Фактическое время утреннего подъема <span class="req">— обязательно</span></label>
           <input type="time" id="mw" value="07:00" lang="ru-RU" oninput="calc()">
         </div>
 
@@ -131,6 +131,7 @@
         </div>
 
         <div id="napRows"></div>
+        <div class="field-hint" style="margin-top:-4px;margin-bottom:14px">Время снов можно не заполнять — покажем рекомендации по подъёму и ползункам. Заполните, чтобы сравнить с фактом и сохранить в историю.</div>
 
         <div class="field">
           <label>Фактический уход в ночь <span class="opt">— необязательно</span></label>
@@ -640,71 +641,87 @@ function calc(){
   const wh=whM/60, fw=fwM/60;
   document.getElementById('whVal').textContent=fh(whM);
   document.getElementById('fwVal').textContent=fh(fwM);
-  const mw=t2m(document.getElementById('mw').value);
-  const naps=getNaps();
-  const anStr=document.getElementById('an').value;
-  const an=anStr?t2m(anStr):null;
 
   const banner=document.getElementById('errBanner');
   function err(t){banner.style.display='flex';document.getElementById('errText').textContent='⚠ '+t;document.getElementById('results').style.opacity='.35';last=null;}
   function ok(){banner.style.display='none';document.getElementById('results').style.opacity='1';}
 
-  if(!naps.length){err('Добавьте хотя бы один дневной сон');drawTimeline(null);return;}
+  // Единственное обязательное поле — фактический утренний подъём.
+  const mwStr=document.getElementById('mw').value;
+  if(!mwStr){ err('Укажите фактическое время утреннего подъёма'); drawTimeline(null); return; }
+  const mw=t2m(mwStr);
+
+  const naps=getNaps();
+  const N=naps.length;
+  const anStr=document.getElementById('an').value;
+  const an=anStr?t2m(anStr):null;
+  if(!N){ ok(); drawTimeline(null); return; }
+
+  // Время снов необязательно: если сон заполнен полностью, берём фактическую
+  // длительность, иначе типовую (DEF) — только для построения рекомендаций.
+  // «Достроенные» по умолчанию дни в историю не сохраняются (см. last ниже).
   const napsComplete=naps.every(n=>Number.isFinite(n.s)&&Number.isFinite(n.e));
   if(napsComplete){
-  if(naps[0].s<=mw){err('Первый сон должен начинаться позже утреннего подъёма');drawTimeline(null);return;}
-  for(let i=0;i<naps.length;i++){
-    if(naps[i].e<=naps[i].s){err(`Пробуждение от сна ${i+1} должно быть позже засыпания`);drawTimeline(null);return;}
-    if(i>0&&naps[i].s<naps[i-1].e){err(`Сон ${i+1} начинается раньше пробуждения от сна ${i}`);drawTimeline(null);return;}
-  }
+    if(naps[0].s<=mw){err('Первый сон должен начинаться позже утреннего подъёма');drawTimeline(null);return;}
+    for(let i=0;i<naps.length;i++){
+      if(naps[i].e<=naps[i].s){err(`Пробуждение от сна ${i+1} должно быть позже засыпания`);drawTimeline(null);return;}
+      if(i>0&&naps[i].s<naps[i-1].e){err(`Сон ${i+1} начинается раньше пробуждения от сна ${i}`);drawTimeline(null);return;}
+    }
   }
 
-  const napTotal=naps.reduce((s,n)=>s+(n.e-n.s),0);
-  const lastEnd=naps[naps.length-1].e;
+  const DEF=90;
+  const durs=naps.map(n=>(Number.isFinite(n.s)&&Number.isFinite(n.e)&&n.e>n.s)?(n.e-n.s):DEF);
+  const napTotal=durs.reduce((a,b)=>a+b,0);
   ok();
 
   // Рекомендации — оба ползунка перестраивают график по окнам бодрствования
   // (всего N+1 окон: утро→сон1, между снами, последний сон→ночь). Связка взвешенная:
   // первый сон в основном от «времени между снами», ночь — от «общего бодрствования»,
   // при этом второй ползунок тоже влияет, но слабее (вес DOM/SEC).
-  const N=naps.length, DOM=.75, SEC=.25;
+  const DOM=.75, SEC=.25;
   const recFirst=mw+(DOM*fwM+SEC*whM/(N+1));               // первый сон: окно бодрствования
   const recNight=mw+napTotal+(DOM*whM+SEC*(N+1)*fwM);      // ночь: дневной сон + бюджет бодрствования
 
   // расписание рекомендованных снов: окно бодрствования между снами = план (fw)
-  const recNaps=[]; for(let i=0,t=recFirst;i<N;i++){const d=naps[i].e-naps[i].s;recNaps.push({s:t,e:t+d});t=t+d+fwM;}
+  const recNaps=[]; for(let i=0,t=recFirst;i<N;i++){recNaps.push({s:t,e:t+durs[i]});t=t+durs[i]+fwM;}
   if(recNight>=mw+1440 || recNaps[N-1].e>=recNight){
     err('Расчёт выходит за пределы суток (24 ч). Уменьшите окно бодрствования, длительность или число снов.');
     drawTimeline(null);return;
   }
 
+  // Опорные точки берём из факта, если сны заполнены, иначе из рекомендации.
+  const firstStart=napsComplete?naps[0].s:recNaps[0].s;
+  const lastEnd=napsComplete?naps[naps.length-1].e:recNaps[N-1].e;
+
   const effNight=(an!=null)?an:recNight;                  // что рисуем на таймлайне
   let effNightAbs=effNight; if(effNightAbs<=lastEnd) effNightAbs+=1440;
 
-  const firstWindowM=naps[0].s-mw;
+  const firstWindowM=firstStart-mw;
   const eveWindowM=effNightAbs-lastEnd;
   const nightDurM=(mw+1440)-effNightAbs;
 
-  // Фактическое общее бодрствование
+  // Фактическое общее бодрствование — только когда есть и сны, и уход в ночь.
   let actWakeM=null;
-  if(an!=null){ let anAbs=an; if(anAbs<=lastEnd) anAbs+=1440; actWakeM=(anAbs-mw)-napTotal; }
+  if(an!=null && napsComplete){ let anAbs=an; if(anAbs<=lastEnd) anAbs+=1440; actWakeM=(anAbs-mw)-napTotal; }
 
   document.getElementById('nightTime').textContent=m2t(recNight);
 
   const napSvg='<svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="26" r="13" fill="#8fe3c6" opacity=".25"/><path d="M18 24h12M18 28h8" stroke="#bdf0db" stroke-width="2.5" stroke-linecap="round"/></svg>';
   const ord=['первый','второй','третий','четвёртый'];
   document.getElementById('napCards').innerHTML=recNaps.map((rn,i)=>{
-    const fd=naps[i].s-rn.s;
+    const hasAct=Number.isFinite(naps[i].s);
     let meta;
-    if(!Number.isFinite(naps[i].s)||!Number.isFinite(rn.s)) meta=`Рекоменд.: ${m2t(rn.s)}`;
-    else if(fd===0) meta=`Факт совпадает с рекомендацией (${m2t(naps[i].s)})`;
-    else meta=`Рекоменд.: ${m2t(rn.s)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`;
+    if(!hasAct) meta=`Рекоменд.: ${m2t(rn.s)}`;
+    else{ const fd=naps[i].s-rn.s;
+      if(fd===0) meta=`Факт совпадает с рекомендацией (${m2t(naps[i].s)})`;
+      else meta=`Рекоменд.: ${m2t(rn.s)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`; }
     const label=N>1?`☀️ Засыпание на ${ord[i]} дневной сон`:'☀️ Засыпание на дневной сон';
     return `<div class="rcard nap">${napSvg}<div class="rlabel">${label}</div><div class="rtime">${m2t(rn.s)}</div><div class="rmeta">${meta}</div></div>`;
   }).join('');
 
+  const est=!napsComplete;
   document.getElementById('nightMeta').textContent =
-    `${naps.length} ${napWord(naps.length)} · Σ сна ${fh(napTotal)} · вечернее окно ${fh(recNight-lastEnd)}`;
+    `${N} ${napWord(N)} · Σ сна ${est?'≈':''}${fh(napTotal)} · вечернее окно ${fh(recNight-lastEnd)}`;
 
   const actCard=document.getElementById('actCard');
   if(actWakeM!=null){
@@ -716,19 +733,19 @@ function calc(){
   }else{
     actCard.classList.add('empty');
     document.getElementById('actWake').textContent='—';
-    document.getElementById('actMeta').textContent='Укажите фактический уход в ночь';
+    document.getElementById('actMeta').textContent=(an!=null)?'Заполните время снов для расчёта':'Укажите фактический уход в ночь';
   }
 
   document.getElementById('stMor').textContent=fh(firstWindowM);
-  document.getElementById('stNap').textContent=fh(napTotal);
+  document.getElementById('stNap').textContent=(est?'≈':'')+fh(napTotal);
   document.getElementById('stEve').textContent=fh(eveWindowM);
   document.getElementById('stNight').textContent=nightDurM>0?fh(nightDurM):'—';
 
-  last=napsComplete?{wh,fw,mw:m2t(mw),napCount:naps.length,
+  last=napsComplete?{wh,fw,mw:m2t(mw),napCount:N,
         naps:naps.map(n=>({s:m2t(n.s),e:m2t(n.e)})),
         napTotal,recFirst:m2t(recFirst),recNight:m2t(recNight),
         an:anStr||'',actWakeM,firstWindowM,eveWindowM,nightDurM}:null;
-  drawTimeline(napsComplete?{mw,naps,recFirst,recNight,nightAbs:effNightAbs,anGiven:an!=null}:null);
+  drawTimeline({mw,naps:(napsComplete?naps:recNaps),recFirst,recNight,nightAbs:effNightAbs,anGiven:an!=null});
 }
 
 /* ---------- timeline (24h horizontal, N naps) ---------- */
