@@ -26,10 +26,14 @@ sleep-planner-kotlin/
 │   ├── SleepPlannerApplication.kt      # точка входа
 │   ├── config/SecurityConfig.kt        # Spring Security, BCrypt, сессии, CORS
 │   ├── user/User.kt                    # сущность AppUser + репозиторий
-│   ├── user/AuthController.kt          # /api/register, /login, /logout, /me
+│   ├── user/AuthController.kt          # /api/register, /login, /logout, /me, /account
+│   ├── child/                          # поддержка нескольких детей на аккаунт
+│   │   ├── Child.kt                    # сущность Child + репозиторий
+│   │   └── ChildController.kt          # /api/children (CRUD) + миграция истории
 │   └── history/
 │       ├── History.kt                  # сущность HistoryEntry + репозиторий
-│       └── HistoryController.kt        # /api/history (CRUD) + очистка 90 дней
+│       ├── HistoryController.kt        # /api/history (CRUD по ребёнку) + очистка 90 дней
+│       └── HistorySchemaMigration.kt   # снятие старого ограничения (user_id, date)
 ├── src/main/resources/
 │   ├── application.yml                 # конфигурация БД и сессии
 │   └── static/index.html               # фронтенд
@@ -83,6 +87,15 @@ IDE сама подтянет зависимости и предложит за�
 | `JPA_DDL_AUTO`             | стратегия схемы (`update`/`validate`)   | `update`     |
 | `SESSION_COOKIE_SECURE`    | флаг Secure для cookie (за HTTPS — `true`) | `false`   |
 | `PORT`                     | порт приложения                         | `8080`       |
+| `MAIL_ENABLED`             | включить реальную отправку писем (код сброса) | `false` |
+| `MAIL_FROM`                | адрес отправителя писем                 | `no-reply@baby-sleep-planner.ru` |
+| `SMTP_HOST`                | хост SMTP-сервера                       | _(пусто)_    |
+| `SMTP_PORT`                | порт SMTP                               | `587`        |
+| `SMTP_USERNAME`            | логин SMTP                              | _(пусто)_    |
+| `SMTP_PASSWORD`            | пароль SMTP                             | _(пусто)_    |
+
+> Если `MAIL_ENABLED=false` или SMTP не настроен, код сброса пароля не отправляется
+> по почте, а выводится в лог приложения (удобно для локальной разработки).
 
 ## Тесты
 
@@ -98,13 +111,27 @@ IDE сама подтянет зависимости и предложит за�
 
 | Метод  | Путь                  | Назначение                          |
 |--------|-----------------------|-------------------------------------|
-| POST   | `/api/register`       | регистрация `{username, password}`  |
+| POST   | `/api/register`       | регистрация `{username, email, password}` |
 | POST   | `/api/login`          | вход `{username, password}`         |
 | POST   | `/api/logout`         | выход (инвалидация сессии)          |
+| POST   | `/api/password/forgot`| запрос кода сброса `{email}`        |
+| POST   | `/api/password/reset` | сброс пароля `{email, code, password}` |
 | GET    | `/api/me`             | текущий пользователь                |
-| GET    | `/api/history`        | список записей (+ очистка 90 дней)  |
-| POST   | `/api/history`        | сохранить/обновить запись за дату   |
-| DELETE | `/api/history/{date}` | удалить запись                      |
+| GET    | `/api/account`        | профиль (логин, e-mail, дата регистрации) |
+| POST   | `/api/account/email`  | изменить e-mail `{email}`           |
+| POST   | `/api/account/password`| сменить пароль `{currentPassword, newPassword}` |
+| GET    | `/api/children`       | список детей аккаунта               |
+| POST   | `/api/children`       | добавить ребёнка `{name, birthDate?}` |
+| PUT    | `/api/children/{id}`  | изменить ребёнка `{name, birthDate?}` |
+| DELETE | `/api/children/{id}`  | удалить ребёнка и его историю       |
+| GET    | `/api/history?childId={id}` | список записей ребёнка (+ очистка 90 дней) |
+| POST   | `/api/history`        | сохранить/обновить запись `{childId, date, …}` |
+| DELETE | `/api/history/{date}?childId={id}` | удалить запись ребёнка    |
+
+> История ведётся **по каждому ребёнку отдельно** (`history.child_id`). При обновлении
+> со старой схемы первый добавленный ребёнок забирает всю прежнюю историю без привязки;
+> устаревшее ограничение уникальности `(user_id, date)` снимается автоматической миграцией
+> при старте (только PostgreSQL, см. `HistorySchemaMigration`).
 
 ## Развёртывание на хостинге
 

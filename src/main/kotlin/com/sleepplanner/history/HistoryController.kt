@@ -1,5 +1,6 @@
 package com.sleepplanner.history
 
+import com.sleepplanner.child.ChildRepository
 import com.sleepplanner.user.SessionUser
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -11,6 +12,7 @@ import java.time.Instant
 /** Тело запроса на сохранение: фронтенд присылает поля camelCase. */
 data class HistorySaveRequest(
     val date: String?,
+    val childId: Long?,
     val wh: Double?,
     val fw: Double?,
     val mw: String?,
@@ -30,16 +32,27 @@ const val RETENTION_DAYS = 90L
 
 @RestController
 @RequestMapping("/api/history")
-class HistoryController(private val repo: HistoryRepository) {
+class HistoryController(
+    private val repo: HistoryRepository,
+    private val children: ChildRepository
+) {
 
     private fun unauthorized() =
         ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("error" to "Требуется вход"))
 
+    private fun forbidden() =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(mapOf("error" to "Нет доступа к этому ребёнку"))
+
     private fun cutoff() = LocalDate.now().minusDays(RETENTION_DAYS).toString()
+
+    /** Проверяет, что ребёнок принадлежит пользователю. */
+    private fun ownsChild(uid: Long, childId: Long) =
+        children.findByIdAndUserId(childId, uid) != null
 
     /** Отдаём строки в snake_case — ровно так их читает фронтенд. */
     private fun toMap(h: HistoryEntry): Map<String, Any?> = mapOf(
         "id" to h.id,
+        "child_id" to h.childId,
         "date" to h.date,
         "wh" to h.wh,
         "fw" to h.fw,
@@ -57,20 +70,34 @@ class HistoryController(private val repo: HistoryRepository) {
     )
 
     @GetMapping
-    fun list(request: HttpServletRequest): ResponseEntity<*> {
+    fun list(
+        @RequestParam(required = false) childId: Long?,
+        request: HttpServletRequest
+    ): ResponseEntity<*> {
         val uid = SessionUser.uid(request) ?: return unauthorized()
         repo.deleteOlderThan(uid, cutoff())
-        val rows = repo.findByUserIdOrderByDateDesc(uid).map { toMap(it) }
-        return ResponseEntity.ok(rows)
+        val entries = if (childId != null) {
+            if (!ownsChild(uid, childId)) return forbidden()
+            repo.findByUserIdAndChildIdOrderByDateDesc(uid, childId)
+        } else {
+            repo.findByUserIdOrderByDateDesc(uid)
+        }
+        return ResponseEntity.ok(entries.map { toMap(it) })
     }
 
     @PostMapping
     fun save(@RequestBody body: HistorySaveRequest, request: HttpServletRequest): ResponseEntity<*> {
         val uid = SessionUser.uid(request) ?: return unauthorized()
         val date = body.date ?: return ResponseEntity.badRequest().body(mapOf("error" to "Не указана дата"))
+        val childId = body.childId
+        if (childId != null && !ownsChild(uid, childId)) return forbidden()
 
-        val existing = repo.findByUserIdAndDate(uid, date)
-        val entry = existing ?: HistoryEntry(userId = uid, date = date)
+        val existing = if (childId != null)
+            repo.findByUserIdAndChildIdAndDate(uid, childId, date)
+        else
+            repo.findByUserIdAndDate(uid, date)
+        val entry = existing ?: HistoryEntry(userId = uid, childId = childId, date = date)
+        entry.childId = childId
 
         entry.wh = body.wh
         entry.fw = body.fw
@@ -93,9 +120,18 @@ class HistoryController(private val repo: HistoryRepository) {
     }
 
     @DeleteMapping("/{date}")
-    fun delete(@PathVariable date: String, request: HttpServletRequest): ResponseEntity<*> {
+    fun delete(
+        @PathVariable date: String,
+        @RequestParam(required = false) childId: Long?,
+        request: HttpServletRequest
+    ): ResponseEntity<*> {
         val uid = SessionUser.uid(request) ?: return unauthorized()
-        repo.deleteByUserIdAndDate(uid, date)
+        if (childId != null) {
+            if (!ownsChild(uid, childId)) return forbidden()
+            repo.deleteByUserIdAndChildIdAndDate(uid, childId, date)
+        } else {
+            repo.deleteByUserIdAndDate(uid, date)
+        }
         return ResponseEntity.ok(mapOf("ok" to true))
     }
 

@@ -15,7 +15,7 @@
 <div class="wrap">
   <!-- ===== TOP BAR ===== -->
   <div class="topbar">
-    <div class="brand">
+    <div class="brand" onclick="goHome()" style="cursor:pointer" title="На главную">
       <svg class="logo" viewBox="0 0 100 100" fill="none">
         <defs><radialGradient id="mg" cx="35%" cy="30%"><stop offset="0%" stop-color="#fff7e8"/><stop offset="100%" stop-color="#ffd98e"/></radialGradient></defs>
         <circle cx="50" cy="50" r="46" fill="rgba(185,167,240,.12)" stroke="rgba(185,167,240,.35)"/>
@@ -28,6 +28,8 @@
     </div>
     <div class="who" id="whoBox" style="display:none">
       <span>Привет, <b id="whoName"></b></span>
+      <select id="childSelect" class="child-select" onchange="switchChild(this.value)" style="display:none"></select>
+      <button class="btn btn-ghost" onclick="openAccount()">Аккаунт</button>
       <button class="btn btn-ghost" onclick="logout()">Выйти</button>
     </div>
   </div>
@@ -44,12 +46,20 @@
       <h2 id="authTitle">Вход</h2>
       <p class="sub" id="authSub">Войдите, чтобы рассчитать режим и сохранять историю по дням</p>
 
-      <div class="field">
+      <div class="field" id="userField">
         <label>Логин</label>
         <input id="loginUser" type="text" placeholder="например, mama_arseniya" autocomplete="username">
       </div>
-      <div class="field">
-        <label>Пароль</label>
+      <div class="field" id="emailField" style="display:none">
+        <label>E-mail</label>
+        <input id="loginEmail" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field" id="codeField" style="display:none">
+        <label>Код из письма</label>
+        <input id="loginCode" type="text" inputmode="numeric" maxlength="6" placeholder="6 цифр" autocomplete="one-time-code">
+      </div>
+      <div class="field" id="passField">
+        <label id="passLabel">Пароль</label>
         <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
       <div class="field" id="confirmField" style="display:none">
@@ -61,9 +71,30 @@
       <div class="msg" id="authMsg"></div>
 
       <div class="switcher" id="switcher">
-        Ещё нет аккаунта? <a onclick="toggleMode()">Зарегистрироваться</a>
+        Ещё нет аккаунта? <a onclick="setMode('register')">Зарегистрироваться</a>
+      </div>
+      <div class="switcher" id="forgotLink">
+        <a onclick="setMode('forgot')">Забыли пароль?</a>
       </div>
       <p class="note">Учётные записи и история хранятся на сервере. Пароли не хранятся в открытом виде — только криптографический хеш.</p>
+    </div>
+  </div>
+
+  <!-- ===== CHILD GATE (первый ребёнок) ===== -->
+  <div class="auth-stage" id="childGate" style="display:none">
+    <div class="auth-card fade" style="max-width:460px">
+      <h2>Добавьте ребёнка</h2>
+      <p class="sub">Расчёты и история ведутся по каждому ребёнку отдельно. Если у вас уже есть сохранённая история — она привяжется к этому ребёнку.</p>
+      <div class="field">
+        <label>Имя</label>
+        <input id="gateChildName" type="text" placeholder="например, Арсений" maxlength="40">
+      </div>
+      <div class="field">
+        <label>Дата рождения <span class="opt">— необязательно</span></label>
+        <input id="gateChildBirth" type="date" lang="ru-RU">
+      </div>
+      <button class="btn btn-primary" onclick="submitFirstChild()">Добавить</button>
+      <div class="msg" id="childGateMsg"></div>
     </div>
   </div>
 
@@ -85,7 +116,7 @@
         </div>
 
         <div class="field">
-          <label>Фактическое время утреннего подъема</label>
+          <label>Фактическое время утреннего подъема <span class="req">— обязательно</span></label>
           <input type="time" id="mw" value="07:00" lang="ru-RU" oninput="calc()">
         </div>
 
@@ -100,6 +131,7 @@
         </div>
 
         <div id="napRows"></div>
+        <div class="field-hint" style="margin-top:-4px;margin-bottom:14px">Время снов можно не заполнять — покажем рекомендации по подъёму и ползункам. Заполните, чтобы сравнить с фактом и сохранить в историю.</div>
 
         <div class="field">
           <label>Фактический уход в ночь <span class="opt">— необязательно</span></label>
@@ -173,9 +205,70 @@
           <p class="ph-sub" style="margin:0">Сохранённые режимы по дням · максимум 90 дней</p>
         </div>
       </div>
+      <div class="hist-tabs" id="histTabs">
+        <button class="htab active" data-days="7" onclick="setHistPeriod(7)">7 дней</button>
+        <button class="htab" data-days="30" onclick="setHistPeriod(30)">30 дней</button>
+      </div>
       <div class="hist-metrics" id="histMetrics"></div>
       <p class="hist-cap" id="histCap"></p>
       <div id="histList"></div>
+    </div>
+  </div>
+
+  <!-- ===== ACCOUNT ===== -->
+  <div class="auth-stage" id="accountStage" style="display:none">
+    <div class="auth-card fade" style="max-width:480px">
+      <h2>Аккаунт</h2>
+      <p class="sub">Ваши данные и настройки входа</p>
+
+      <div class="acc-row"><span class="k">Логин</span><span class="v" id="accUser">—</span></div>
+      <div class="acc-row"><span class="k">E-mail</span><span class="v" id="accEmailView">—</span></div>
+      <div class="acc-row"><span class="k">Дата регистрации</span><span class="v" id="accCreated">—</span></div>
+
+      <div class="acc-sec">
+        <h3>Дети</h3>
+        <div id="accChildren"></div>
+        <div class="field" style="margin-top:14px">
+          <label>Имя</label>
+          <input id="newChildName" type="text" placeholder="Имя ребёнка" maxlength="40">
+        </div>
+        <div class="field">
+          <label>Дата рождения <span class="opt">— необязательно</span></label>
+          <input id="newChildBirth" type="date" lang="ru-RU">
+        </div>
+        <button class="btn btn-primary" onclick="addChild()">Добавить ребёнка</button>
+        <div class="msg" id="accChildMsg"></div>
+      </div>
+
+      <div class="acc-sec">
+        <h3>E-mail</h3>
+        <div class="field">
+          <label>Адрес для восстановления пароля</label>
+          <input id="accEmail" type="email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <button class="btn btn-primary" onclick="saveEmail()">Сохранить e-mail</button>
+        <div class="msg" id="accEmailMsg"></div>
+      </div>
+
+      <div class="acc-sec">
+        <h3>Изменить пароль</h3>
+        <div class="field">
+          <label>Текущий пароль</label>
+          <input id="accCurPass" type="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div class="field">
+          <label>Новый пароль</label>
+          <input id="accNewPass" type="password" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label>Повторите новый пароль</label>
+          <input id="accNewPass2" type="password" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary" onclick="changePassword()">Изменить пароль</button>
+        <div class="msg" id="accPassMsg"></div>
+      </div>
+
+      <div class="switcher"><a onclick="closeAccount()">← Вернуться к расчёту</a></div>
     </div>
   </div>
 </div>
@@ -209,30 +302,55 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 
 /* ---------- auth ---------- */
 let mode='login', currentUser=null;
-function toggleMode(){
-  mode=mode==='login'?'register':'login';
-  document.getElementById('confirmField').style.display=mode==='register'?'block':'none';
-  document.getElementById('authTitle').textContent=mode==='register'?'Создать аккаунт':'Вход';
-  document.getElementById('authSub').textContent=mode==='register'?'Зарегистрируйтесь, чтобы сохранять историю расчётов':'Войдите, чтобы рассчитать режим и сохранять историю по дням';
-  document.getElementById('authBtn').textContent=mode==='register'?'Зарегистрироваться':'Войти';
-  document.getElementById('switcher').innerHTML=mode==='register'
-    ? 'Уже есть аккаунт? <a onclick="toggleMode()">Войти</a>'
-    : 'Ещё нет аккаунта? <a onclick="toggleMode()">Зарегистрироваться</a>';
+let children=[], currentChildId=null;
+const AUTH_TEXT={
+  login:   ['Вход','Войдите, чтобы рассчитать режим и сохранять историю по дням','Войти'],
+  register:['Создать аккаунт','Зарегистрируйтесь, чтобы сохранять историю расчётов','Зарегистрироваться'],
+  forgot:  ['Сброс пароля','Укажите e-mail аккаунта — пришлём код для сброса','Отправить код'],
+  reset:   ['Новый пароль','Введите код из письма и задайте новый пароль','Сбросить пароль']
+};
+function setMode(m){
+  mode=m;
+  const show=(id,on)=>document.getElementById(id).style.display=on?'block':'none';
+  show('userField',  m==='login'||m==='register');
+  show('emailField', m==='register'||m==='forgot'||m==='reset');
+  show('codeField',  m==='reset');
+  show('passField',  m==='login'||m==='register'||m==='reset');
+  show('confirmField', m==='register'||m==='reset');
+  show('forgotLink', m==='login');
+
+  const t=AUTH_TEXT[m];
+  document.getElementById('authTitle').textContent=t[0];
+  document.getElementById('authSub').textContent=t[1];
+  document.getElementById('authBtn').textContent=t[2];
+  document.getElementById('passLabel').textContent=m==='reset'?'Новый пароль':'Пароль';
+  document.getElementById('loginPass').setAttribute('autocomplete', m==='login'?'current-password':'new-password');
+
+  const sw=document.getElementById('switcher');
+  if(m==='login')        sw.innerHTML='Ещё нет аккаунта? <a onclick="setMode(\'register\')">Зарегистрироваться</a>';
+  else if(m==='register')sw.innerHTML='Уже есть аккаунт? <a onclick="setMode(\'login\')">Войти</a>';
+  else                   sw.innerHTML='Вспомнили пароль? <a onclick="setMode(\'login\')">Войти</a>';
   setMsg('');
 }
 function setMsg(m,type){const e=document.getElementById('authMsg');e.textContent=m||'';e.className='msg '+(type||'');}
 
 async function submitAuth(){
-  const u=document.getElementById('loginUser').value.trim().toLowerCase();
-  const p=document.getElementById('loginPass').value;
-  if(!u||!p){setMsg('Введите логин и пароль','err');return;}
-  if(u.length<3){setMsg('Логин — минимум 3 символа','err');return;}
   try{
+    if(mode==='forgot') return await submitForgot();
+    if(mode==='reset')  return await submitReset();
+
+    const u=document.getElementById('loginUser').value.trim().toLowerCase();
+    const p=document.getElementById('loginPass').value;
+    if(!u||!p){setMsg('Введите логин и пароль','err');return;}
+    if(u.length<3){setMsg('Логин — минимум 3 символа','err');return;}
+
     if(mode==='register'){
+      const email=document.getElementById('loginEmail').value.trim().toLowerCase();
       const p2=document.getElementById('loginPass2').value;
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg('Укажите корректный e-mail','err');return;}
       if(p.length<4){setMsg('Пароль — минимум 4 символа','err');return;}
       if(p!==p2){setMsg('Пароли не совпадают','err');return;}
-      const res=await api('POST','/register',{username:u,password:p});
+      const res=await api('POST','/register',{username:u,password:p,email});
       setMsg('Аккаунт создан!','ok');
       await startSession(res.username);
     }else{
@@ -242,24 +360,244 @@ async function submitAuth(){
   }catch(e){ setMsg(e.message,'err'); }
 }
 
+async function submitForgot(){
+  const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg('Укажите корректный e-mail','err');return;}
+  await api('POST','/password/forgot',{email});
+  setMode('reset');
+  setMsg('Если такой e-mail зарегистрирован, мы отправили на него код','ok');
+}
+
+async function submitReset(){
+  const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+  const code=document.getElementById('loginCode').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const p2=document.getElementById('loginPass2').value;
+  if(!code){setMsg('Введите код из письма','err');return;}
+  if(p.length<4){setMsg('Пароль — минимум 4 символа','err');return;}
+  if(p!==p2){setMsg('Пароли не совпадают','err');return;}
+  await api('POST','/password/reset',{email,code,password:p});
+  setMode('login');
+  setMsg('Пароль обновлён — войдите с новым паролем','ok');
+}
+
 async function startSession(u){
   currentUser=u;
   document.getElementById('authStage').style.display='none';
-  document.getElementById('app').style.display='block';
+  document.getElementById('accountStage').style.display='none';
+  document.getElementById('childGate').style.display='none';
   document.getElementById('whoBox').style.display='flex';
   document.getElementById('whoName').textContent=u;
+  await loadChildren();
+  if(!children.length){ showChildGate(); return; }
+  pickCurrentChild();
+  enterApp();
+}
+/* Показ основного приложения для выбранного ребёнка. */
+function enterApp(){
+  document.getElementById('childGate').style.display='none';
+  document.getElementById('app').style.display='block';
   const d=new Date();document.getElementById('histDate').value=d.toISOString().slice(0,10);
+  populateChildSelect();
   buildNaps();
   calc();
-  await renderHistory();
+  renderHistory();
 }
 async function logout(){
   try{ await api('POST','/logout'); }catch(e){}
-  currentUser=null;
+  currentUser=null; children=[]; currentChildId=null;
   document.getElementById('app').style.display='none';
+  document.getElementById('accountStage').style.display='none';
+  document.getElementById('childGate').style.display='none';
+  document.getElementById('childSelect').style.display='none';
   document.getElementById('whoBox').style.display='none';
   document.getElementById('authStage').style.display='flex';
   document.getElementById('loginPass').value='';
+  document.getElementById('loginPass2').value='';
+  document.getElementById('loginCode').value='';
+  setMode('login');
+}
+
+/* ---------- children ---------- */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function plural(n,one,few,many){
+  const m10=n%10,m100=n%100;
+  if(m10===1&&m100!==11) return one;
+  if(m10>=2&&m10<=4&&(m100<10||m100>=20)) return few;
+  return many;
+}
+/* Дата рождения → возраст словами: «1 год 3 мес». */
+function ageFromBirth(iso){
+  if(!iso) return '';
+  const b=new Date(iso); if(isNaN(b.getTime())) return '';
+  const now=new Date();
+  let months=(now.getFullYear()-b.getFullYear())*12+(now.getMonth()-b.getMonth());
+  if(now.getDate()<b.getDate()) months--;
+  if(months<0) return '';
+  if(months<1) return 'меньше месяца';
+  const y=Math.floor(months/12), m=months%12, parts=[];
+  if(y>0) parts.push(y+' '+plural(y,'год','года','лет'));
+  if(m>0) parts.push(m+' '+plural(m,'месяц','месяца','месяцев'));
+  return parts.join(' ');
+}
+function childLabel(c){ const a=ageFromBirth(c.birthDate); return c.name+(a?' · '+a:''); }
+
+async function loadChildren(){
+  try{ children=await api('GET','/children'); }catch(e){ children=[]; }
+  return children;
+}
+function pickCurrentChild(){
+  const saved=localStorage.getItem('child:'+currentUser);
+  if(saved && children.some(c=>String(c.id)===String(saved))) currentChildId=saved;
+  else if(children.length) currentChildId=String(children[0].id);
+  else currentChildId=null;
+}
+function populateChildSelect(){
+  const sel=document.getElementById('childSelect');
+  if(!children.length){ sel.style.display='none'; sel.innerHTML=''; return; }
+  sel.style.display='';
+  sel.innerHTML=children.map(c=>`<option value="${c.id}">${esc(childLabel(c))}</option>`).join('');
+  if(currentChildId) sel.value=currentChildId;
+}
+async function switchChild(id){
+  currentChildId=String(id);
+  localStorage.setItem('child:'+currentUser,currentChildId);
+  await renderHistory();
+}
+function showChildGate(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('accountStage').style.display='none';
+  document.getElementById('childGate').style.display='flex';
+  document.getElementById('gateChildName').value='';
+  document.getElementById('gateChildBirth').value='';
+  setMsg2('childGateMsg','');
+}
+async function submitFirstChild(){
+  const name=document.getElementById('gateChildName').value.trim();
+  const birth=document.getElementById('gateChildBirth').value;
+  if(name.length<1){setMsg2('childGateMsg','Укажите имя ребёнка','err');return;}
+  try{
+    const c=await api('POST','/children',{name,birthDate:birth||null});
+    await loadChildren();
+    currentChildId=String(c.id);
+    localStorage.setItem('child:'+currentUser,currentChildId);
+    enterApp();
+  }catch(e){ setMsg2('childGateMsg',e.message,'err'); }
+}
+/* Список детей на странице аккаунта. */
+function renderChildren(){
+  const el=document.getElementById('accChildren');
+  if(!children.length){ el.innerHTML='<div class="acc-empty">Пока нет добавленных детей.</div>'; return; }
+  el.innerHTML=children.map(c=>{
+    const age=ageFromBirth(c.birthDate);
+    const info=c.birthDate?(fmtDate(c.birthDate)+(age?' · '+age:'')):'дата рождения не указана';
+    return `
+    <div class="child-row">
+      <div class="child-info"><b>${esc(c.name)}</b><small>${esc(info)}</small></div>
+      <button class="hdel" onclick="deleteChild(${c.id})" title="Удалить ребёнка">✕</button>
+    </div>`;
+  }).join('');
+}
+async function addChild(){
+  const name=document.getElementById('newChildName').value.trim();
+  const birth=document.getElementById('newChildBirth').value;
+  if(name.length<1){setMsg2('accChildMsg','Укажите имя ребёнка','err');return;}
+  try{
+    const c=await api('POST','/children',{name,birthDate:birth||null});
+    document.getElementById('newChildName').value='';
+    document.getElementById('newChildBirth').value='';
+    await loadChildren();
+    if(!currentChildId){ currentChildId=String(c.id); localStorage.setItem('child:'+currentUser,currentChildId); }
+    renderChildren(); populateChildSelect();
+    setMsg2('accChildMsg','Ребёнок добавлен','ok');
+  }catch(e){ setMsg2('accChildMsg',e.message,'err'); }
+}
+async function deleteChild(id){
+  if(!confirm('Удалить ребёнка и всю его историю расчётов?')) return;
+  try{
+    await api('DELETE','/children/'+id);
+    await loadChildren();
+    if(String(currentChildId)===String(id)){
+      currentChildId=children.length?String(children[0].id):null;
+      if(currentChildId) localStorage.setItem('child:'+currentUser,currentChildId);
+      else localStorage.removeItem('child:'+currentUser);
+    }
+    renderChildren(); populateChildSelect();
+    setMsg2('accChildMsg','Ребёнок удалён','ok');
+  }catch(e){ setMsg2('accChildMsg',e.message,'err'); }
+}
+
+/* ---------- account ---------- */
+/* ISO-метка времени (createdAt) → dd/mm/yyyy. */
+function fmtAccDate(iso){
+  const d=new Date(iso);
+  if(isNaN(d.getTime())) return iso||'—';
+  const p=n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+function setMsg2(id,m,type){const e=document.getElementById(id);e.textContent=m||'';e.className='msg '+(type||'');}
+
+async function openAccount(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('accountStage').style.display='flex';
+  setMsg2('accEmailMsg','');setMsg2('accPassMsg','');
+  document.getElementById('accCurPass').value='';
+  document.getElementById('accNewPass').value='';
+  document.getElementById('accNewPass2').value='';
+  setMsg2('accChildMsg','');
+  document.getElementById('newChildName').value='';
+  document.getElementById('newChildBirth').value='';
+  renderChildren();
+  try{
+    const a=await api('GET','/account');
+    document.getElementById('accUser').textContent=a.username||'—';
+    document.getElementById('accEmailView').textContent=a.email||'не указан';
+    document.getElementById('accCreated').textContent=a.createdAt?fmtAccDate(a.createdAt):'—';
+    document.getElementById('accEmail').value=a.email||'';
+  }catch(e){ setMsg2('accEmailMsg',e.message,'err'); }
+}
+function closeAccount(){
+  document.getElementById('accountStage').style.display='none';
+  if(!children.length){ showChildGate(); }
+  else { document.getElementById('app').style.display='block'; }
+}
+/* Клик по заголовку — вернуться на главную (к расчёту). */
+function goHome(){
+  if(!currentUser) return; // не залогинен — остаёмся на экране входа
+  document.getElementById('accountStage').style.display='none';
+  if(children.length){
+    document.getElementById('childGate').style.display='none';
+    document.getElementById('app').style.display='block';
+  }else{
+    showChildGate();
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function saveEmail(){
+  const email=document.getElementById('accEmail').value.trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg2('accEmailMsg','Укажите корректный e-mail','err');return;}
+  try{
+    const r=await api('POST','/account/email',{email});
+    document.getElementById('accEmailView').textContent=r.email;
+    setMsg2('accEmailMsg','E-mail сохранён','ok');
+  }catch(e){ setMsg2('accEmailMsg',e.message,'err'); }
+}
+
+async function changePassword(){
+  const cur=document.getElementById('accCurPass').value;
+  const np=document.getElementById('accNewPass').value;
+  const np2=document.getElementById('accNewPass2').value;
+  if(!cur){setMsg2('accPassMsg','Введите текущий пароль','err');return;}
+  if(np.length<4){setMsg2('accPassMsg','Пароль — минимум 4 символа','err');return;}
+  if(np!==np2){setMsg2('accPassMsg','Пароли не совпадают','err');return;}
+  try{
+    await api('POST','/account/password',{currentPassword:cur,newPassword:np});
+    document.getElementById('accCurPass').value='';
+    document.getElementById('accNewPass').value='';
+    document.getElementById('accNewPass2').value='';
+    setMsg2('accPassMsg','Пароль изменён','ok');
+  }catch(e){ setMsg2('accPassMsg',e.message,'err'); }
 }
 
 /* ---------- time math ---------- */
@@ -303,71 +641,87 @@ function calc(){
   const wh=whM/60, fw=fwM/60;
   document.getElementById('whVal').textContent=fh(whM);
   document.getElementById('fwVal').textContent=fh(fwM);
-  const mw=t2m(document.getElementById('mw').value);
-  const naps=getNaps();
-  const anStr=document.getElementById('an').value;
-  const an=anStr?t2m(anStr):null;
 
   const banner=document.getElementById('errBanner');
   function err(t){banner.style.display='flex';document.getElementById('errText').textContent='⚠ '+t;document.getElementById('results').style.opacity='.35';last=null;}
   function ok(){banner.style.display='none';document.getElementById('results').style.opacity='1';}
 
-  if(!naps.length){err('Добавьте хотя бы один дневной сон');drawTimeline(null);return;}
+  // Единственное обязательное поле — фактический утренний подъём.
+  const mwStr=document.getElementById('mw').value;
+  if(!mwStr){ err('Укажите фактическое время утреннего подъёма'); drawTimeline(null); return; }
+  const mw=t2m(mwStr);
+
+  const naps=getNaps();
+  const N=naps.length;
+  const anStr=document.getElementById('an').value;
+  const an=anStr?t2m(anStr):null;
+  if(!N){ ok(); drawTimeline(null); return; }
+
+  // Время снов необязательно: если сон заполнен полностью, берём фактическую
+  // длительность, иначе типовую (DEF) — только для построения рекомендаций.
+  // «Достроенные» по умолчанию дни в историю не сохраняются (см. last ниже).
   const napsComplete=naps.every(n=>Number.isFinite(n.s)&&Number.isFinite(n.e));
   if(napsComplete){
-  if(naps[0].s<=mw){err('Первый сон должен начинаться позже утреннего подъёма');drawTimeline(null);return;}
-  for(let i=0;i<naps.length;i++){
-    if(naps[i].e<=naps[i].s){err(`Пробуждение от сна ${i+1} должно быть позже засыпания`);drawTimeline(null);return;}
-    if(i>0&&naps[i].s<naps[i-1].e){err(`Сон ${i+1} начинается раньше пробуждения от сна ${i}`);drawTimeline(null);return;}
-  }
+    if(naps[0].s<=mw){err('Первый сон должен начинаться позже утреннего подъёма');drawTimeline(null);return;}
+    for(let i=0;i<naps.length;i++){
+      if(naps[i].e<=naps[i].s){err(`Пробуждение от сна ${i+1} должно быть позже засыпания`);drawTimeline(null);return;}
+      if(i>0&&naps[i].s<naps[i-1].e){err(`Сон ${i+1} начинается раньше пробуждения от сна ${i}`);drawTimeline(null);return;}
+    }
   }
 
-  const napTotal=naps.reduce((s,n)=>s+(n.e-n.s),0);
-  const lastEnd=naps[naps.length-1].e;
+  const DEF=90;
+  const durs=naps.map(n=>(Number.isFinite(n.s)&&Number.isFinite(n.e)&&n.e>n.s)?(n.e-n.s):DEF);
+  const napTotal=durs.reduce((a,b)=>a+b,0);
   ok();
 
   // Рекомендации — оба ползунка перестраивают график по окнам бодрствования
   // (всего N+1 окон: утро→сон1, между снами, последний сон→ночь). Связка взвешенная:
   // первый сон в основном от «времени между снами», ночь — от «общего бодрствования»,
   // при этом второй ползунок тоже влияет, но слабее (вес DOM/SEC).
-  const N=naps.length, DOM=.75, SEC=.25;
+  const DOM=.75, SEC=.25;
   const recFirst=mw+(DOM*fwM+SEC*whM/(N+1));               // первый сон: окно бодрствования
   const recNight=mw+napTotal+(DOM*whM+SEC*(N+1)*fwM);      // ночь: дневной сон + бюджет бодрствования
 
   // расписание рекомендованных снов: окно бодрствования между снами = план (fw)
-  const recNaps=[]; for(let i=0,t=recFirst;i<N;i++){const d=naps[i].e-naps[i].s;recNaps.push({s:t,e:t+d});t=t+d+fwM;}
+  const recNaps=[]; for(let i=0,t=recFirst;i<N;i++){recNaps.push({s:t,e:t+durs[i]});t=t+durs[i]+fwM;}
   if(recNight>=mw+1440 || recNaps[N-1].e>=recNight){
     err('Расчёт выходит за пределы суток (24 ч). Уменьшите окно бодрствования, длительность или число снов.');
     drawTimeline(null);return;
   }
 
+  // Опорные точки берём из факта, если сны заполнены, иначе из рекомендации.
+  const firstStart=napsComplete?naps[0].s:recNaps[0].s;
+  const lastEnd=napsComplete?naps[naps.length-1].e:recNaps[N-1].e;
+
   const effNight=(an!=null)?an:recNight;                  // что рисуем на таймлайне
   let effNightAbs=effNight; if(effNightAbs<=lastEnd) effNightAbs+=1440;
 
-  const firstWindowM=naps[0].s-mw;
+  const firstWindowM=firstStart-mw;
   const eveWindowM=effNightAbs-lastEnd;
   const nightDurM=(mw+1440)-effNightAbs;
 
-  // Фактическое общее бодрствование
+  // Фактическое общее бодрствование — только когда есть и сны, и уход в ночь.
   let actWakeM=null;
-  if(an!=null){ let anAbs=an; if(anAbs<=lastEnd) anAbs+=1440; actWakeM=(anAbs-mw)-napTotal; }
+  if(an!=null && napsComplete){ let anAbs=an; if(anAbs<=lastEnd) anAbs+=1440; actWakeM=(anAbs-mw)-napTotal; }
 
   document.getElementById('nightTime').textContent=m2t(recNight);
 
   const napSvg='<svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="26" r="13" fill="#8fe3c6" opacity=".25"/><path d="M18 24h12M18 28h8" stroke="#bdf0db" stroke-width="2.5" stroke-linecap="round"/></svg>';
   const ord=['первый','второй','третий','четвёртый'];
   document.getElementById('napCards').innerHTML=recNaps.map((rn,i)=>{
-    const fd=naps[i].s-rn.s;
+    const hasAct=Number.isFinite(naps[i].s);
     let meta;
-    if(!Number.isFinite(naps[i].s)||!Number.isFinite(rn.s)) meta=`Рекоменд.: ${m2t(rn.s)}`;
-    else if(fd===0) meta=`Факт совпадает с рекомендацией (${m2t(naps[i].s)})`;
-    else meta=`Рекоменд.: ${m2t(rn.s)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`;
+    if(!hasAct) meta=`Рекоменд.: ${m2t(rn.s)}`;
+    else{ const fd=naps[i].s-rn.s;
+      if(fd===0) meta=`Факт совпадает с рекомендацией (${m2t(naps[i].s)})`;
+      else meta=`Рекоменд.: ${m2t(rn.s)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`; }
     const label=N>1?`☀️ Засыпание на ${ord[i]} дневной сон`:'☀️ Засыпание на дневной сон';
     return `<div class="rcard nap">${napSvg}<div class="rlabel">${label}</div><div class="rtime">${m2t(rn.s)}</div><div class="rmeta">${meta}</div></div>`;
   }).join('');
 
+  const est=!napsComplete;
   document.getElementById('nightMeta').textContent =
-    `${naps.length} ${napWord(naps.length)} · Σ сна ${fh(napTotal)} · вечернее окно ${fh(recNight-lastEnd)}`;
+    `${N} ${napWord(N)} · Σ сна ${est?'≈':''}${fh(napTotal)} · вечернее окно ${fh(recNight-lastEnd)}`;
 
   const actCard=document.getElementById('actCard');
   if(actWakeM!=null){
@@ -379,19 +733,23 @@ function calc(){
   }else{
     actCard.classList.add('empty');
     document.getElementById('actWake').textContent='—';
-    document.getElementById('actMeta').textContent='Укажите фактический уход в ночь';
+    document.getElementById('actMeta').textContent=(an!=null)?'Заполните время снов для расчёта':'Укажите фактический уход в ночь';
   }
 
   document.getElementById('stMor').textContent=fh(firstWindowM);
-  document.getElementById('stNap').textContent=fh(napTotal);
+  document.getElementById('stNap').textContent=(est?'≈':'')+fh(napTotal);
   document.getElementById('stEve').textContent=fh(eveWindowM);
   document.getElementById('stNight').textContent=nightDurM>0?fh(nightDurM):'—';
 
-  last=napsComplete?{wh,fw,mw:m2t(mw),napCount:naps.length,
-        naps:naps.map(n=>({s:m2t(n.s),e:m2t(n.e)})),
-        napTotal,recFirst:m2t(recFirst),recNight:m2t(recNight),
-        an:anStr||'',actWakeM,firstWindowM,eveWindowM,nightDurM}:null;
-  drawTimeline(napsComplete?{mw,naps,recFirst,recNight,nightAbs:effNightAbs,anGiven:an!=null}:null);
+  // Сохранять можно, даже если заполнен только обязательный утренний подъём.
+  // Незаполненные сны пишем пустыми строками (сохраняя индексы), а суммарный
+  // дневной сон не фиксируем (null), чтобы оценочная длительность не искажала
+  // средние в истории.
+  last={wh,fw,mw:m2t(mw),napCount:N,
+        naps:naps.map(n=>({s:Number.isFinite(n.s)?m2t(n.s):'',e:Number.isFinite(n.e)?m2t(n.e):''})),
+        napTotal:napsComplete?napTotal:null,recFirst:m2t(recFirst),recNight:m2t(recNight),
+        an:anStr||'',actWakeM,firstWindowM,eveWindowM,nightDurM};
+  drawTimeline({mw,naps:(napsComplete?naps:recNaps),recFirst,recNight,nightAbs:effNightAbs,anGiven:an!=null});
 }
 
 /* ---------- timeline (24h horizontal, N naps) ---------- */
@@ -465,45 +823,65 @@ function clearFields(){
 /* ---------- history ---------- */
 async function saveCalc(){
   if(!last){toast('Сначала исправьте параметры');return;}
+  if(!currentChildId){toast('Сначала добавьте ребёнка');return;}
   const date=document.getElementById('histDate').value;
   if(!date){toast('Выберите дату');return;}
   try{
-    const res=await api('POST','/history',Object.assign({date},last));
+    const res=await api('POST','/history',Object.assign({date,childId:Number(currentChildId)},last));
     toast(res.updated?'Запись за '+fmtDate(date)+' обновлена':'Сохранено в историю');
     await renderHistory();
   }catch(e){ toast(e.message); }
 }
+/* Текущий хвост запроса с привязкой к выбранному ребёнку. */
+function childQuery(){ return currentChildId?('?childId='+encodeURIComponent(currentChildId)):''; }
 function dStr(offsetDays){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-offsetDays);return d.toISOString().slice(0,10);}
-function avgWake(rows,days){
+/* Средние за период: общее бодрствование (факт, иначе план) и ночной сон. */
+function periodStats(rows,days){
   const from=dStr(days-1), to=dStr(0);
-  let sum=0,n=0;
+  let ws=0,wn=0,ns=0,nn=0,ds=0,dn=0;
   rows.forEach(h=>{
     if(h.date>=from && h.date<=to){
-      const w=(h.actual_wake_m!=null)?h.actual_wake_m:h.wh*60; // факт, где есть; иначе план
-      sum+=w;n++;
+      const w=(h.actual_wake_m!=null)?h.actual_wake_m:(h.wh!=null?h.wh*60:null);
+      if(w!=null){ws+=w;wn++;}
+      if(h.night_dur_m!=null){ns+=h.night_dur_m;nn++;}
+      if(h.nap_total_m!=null){ds+=h.nap_total_m;dn++;}
     }
   });
-  return {avg:n?sum/n:null,n};
+  return {wakeAvg:wn?ws/wn:null,wakeN:wn,nightAvg:nn?ns/nn:null,nightN:nn,dayAvg:dn?ds/dn:null,dayN:dn};
+}
+let histPeriod=7, histRows=[];
+function setHistPeriod(d){
+  histPeriod=d;
+  document.querySelectorAll('#histTabs .htab').forEach(b=>b.classList.toggle('active',+b.dataset.days===d));
+  renderMetrics();
+}
+function renderMetrics(){
+  const s=periodStats(histRows,histPeriod);
+  const sub=n=>n?'по '+n+' дн.':'нет записей';
+  document.getElementById('histMetrics').innerHTML=`
+    <div class="hmetric">
+      <div class="hm-lbl">🌙 Средний ночной сон</div>
+      <div class="hm-val">${s.nightAvg!=null?fh(s.nightAvg):'—'}</div>
+      <div class="hm-sub">${sub(s.nightN)}</div>
+    </div>
+    <div class="hmetric">
+      <div class="hm-lbl">😴 Средний дневной сон</div>
+      <div class="hm-val">${s.dayAvg!=null?fh(s.dayAvg):'—'}</div>
+      <div class="hm-sub">${sub(s.dayN)}</div>
+    </div>
+    <div class="hmetric">
+      <div class="hm-lbl">☀️ Среднее бодрствование</div>
+      <div class="hm-val">${s.wakeAvg!=null?fh(s.wakeAvg):'—'}</div>
+      <div class="hm-sub">${sub(s.wakeN)}</div>
+    </div>`;
 }
 async function renderHistory(){
   let rows=[];
-  try{ rows=await api('GET','/history'); }catch(e){ rows=[]; }
-
-  // средние показатели общего бодрствования
-  const a7=avgWake(rows,7), a30=avgWake(rows,30);
-  document.getElementById('histMetrics').innerHTML=`
-    <div class="hmetric">
-      <div class="hm-lbl">📊 Среднее бодрствование · 7 дней</div>
-      <div class="hm-val">${a7.avg!=null?fh(a7.avg):'—'}</div>
-      <div class="hm-sub">${a7.n?'усреднено по '+a7.n+' дн.':'нет записей за период'}</div>
-    </div>
-    <div class="hmetric">
-      <div class="hm-lbl">📈 Среднее бодрствование · 30 дней</div>
-      <div class="hm-val">${a30.avg!=null?fh(a30.avg):'—'}</div>
-      <div class="hm-sub">${a30.n?'усреднено по '+a30.n+' дн.':'нет записей за период'}</div>
-    </div>`;
+  try{ rows=await api('GET','/history'+childQuery()); }catch(e){ rows=[]; }
+  histRows=rows;
+  renderMetrics();
   document.getElementById('histCap').textContent =
-    'Учитывается фактическое общее бодрствование, где указан уход в ночь, иначе плановое. Записи старше 90 дней удаляются автоматически.';
+    'Ночной сон — по фактической длительности; бодрствование — факт, где указан уход в ночь, иначе плановое. Записи старше 90 дней удаляются автоматически.';
 
   const el=document.getElementById('histList');
   if(!rows.length){el.innerHTML='<div class="hist-empty">Пока нет сохранённых дней.<br>Рассчитайте режим и нажмите «Сохранить в историю».</div>';return;}
@@ -521,7 +899,7 @@ async function renderHistory(){
 }
 async function loadRec(date){
   let rows=[];
-  try{ rows=await api('GET','/history'); }catch(e){ return; }
+  try{ rows=await api('GET','/history'+childQuery()); }catch(e){ return; }
   const h=rows.find(x=>x.date===date); if(!h)return;
   document.getElementById('wh').value=Math.round(h.wh*60);
   document.getElementById('fw').value=Math.round(h.fw*60);
@@ -537,7 +915,7 @@ async function loadRec(date){
   toast('Загружен расчёт за '+fmtDate(date));
 }
 async function delRec(date){
-  try{ await api('DELETE','/history/'+encodeURIComponent(date)); toast('Запись удалена'); }
+  try{ await api('DELETE','/history/'+encodeURIComponent(date)+childQuery()); toast('Запись удалена'); }
   catch(e){ toast(e.message); }
   await renderHistory();
 }

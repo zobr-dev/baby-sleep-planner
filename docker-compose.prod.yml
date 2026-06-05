@@ -37,6 +37,13 @@ services:
       JDBC_DATABASE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required (see .env.example)}
       SESSION_COOKIE_SECURE: "true"
       JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
+      # Почта для кода сброса пароля. По умолчанию выключена (код пишется в лог).
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@example.com}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
     ports:
       # только localhost — публичный доступ идёт через nginx-реверс-прокси
       - "127.0.0.1:8080:8080"

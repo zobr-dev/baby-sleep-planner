@@ -1,5 +1,6 @@
 package com.sleepplanner
 
+import com.sleepplanner.child.ChildRepository
 import com.sleepplanner.history.HistoryEntry
 import com.sleepplanner.history.HistoryRepository
 import com.sleepplanner.user.UserRepository
@@ -36,6 +37,7 @@ class ApiFlowTest : FeatureSpec() {
     @Autowired lateinit var mvc: MockMvc
     @Autowired lateinit var users: UserRepository
     @Autowired lateinit var history: HistoryRepository
+    @Autowired lateinit var childrenRepo: ChildRepository
 
     override fun extensions() = listOf(SpringExtension)
 
@@ -45,26 +47,41 @@ class ApiFlowTest : FeatureSpec() {
         mvc.perform(
             post("/api/register").session(session)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"username":"$username","password":"$password"}""")
+                .content("""{"username":"$username","password":"$password","email":"$username@test.local"}""")
         ).andExpect(status().isOk)
         return session
+    }
+
+    /** Создаёт ребёнка через API и возвращает его id. */
+    private fun addChild(session: MockHttpSession, name: String = "Малыш"): Long {
+        val body = mvc.perform(
+            post("/api/children").session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name":"$name"}""")
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+        return Regex("\"id\":(\\d+)").find(body)!!.groupValues[1].toLong()
     }
 
     private fun saveBody(
         date: String,
         an: String = "21:30",
-        naps: String = """[{"s":"13:00","e":"15:00"}]"""
-    ) = """
-        {"date":"$date","wh":12,"fw":6,"mw":"07:00","napCount":1,
+        naps: String = """[{"s":"13:00","e":"15:00"}]""",
+        childId: Long? = null
+    ): String {
+        val childLine = if (childId != null) "\"childId\":$childId," else ""
+        return """
+        {"date":"$date",${childLine}"wh":12,"fw":6,"mw":"07:00","napCount":1,
          "naps":$naps,"napTotal":120,
          "recFirst":"13:00","recNight":"21:00","an":"$an","actWakeM":750,
          "firstWindowM":360,"eveWindowM":390,"nightDurM":570}
-    """.trimIndent()
+        """.trimIndent()
+    }
 
     init {
         // Чистая БД перед каждым сценарием — изоляция тестов.
         beforeTest {
             history.deleteAll()
+            childrenRepo.deleteAll()
             users.deleteAll()
         }
 
@@ -74,7 +91,7 @@ class ApiFlowTest : FeatureSpec() {
                 mvc.perform(
                     post("/api/register").session(s)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"username":"mama","password":"1234"}""")
+                        .content("""{"username":"mama","password":"1234","email":"mama@test.local"}""")
                 ).andExpect(status().isOk)
                     .andExpect(jsonPath("$.username").value("mama"))
 
@@ -87,7 +104,7 @@ class ApiFlowTest : FeatureSpec() {
                 mvc.perform(
                     post("/api/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"username":"  MaMa_Arseniya  ","password":"1234"}""")
+                        .content("""{"username":"  MaMa_Arseniya  ","password":"1234","email":"arseniya@test.local"}""")
                 ).andExpect(status().isOk)
                     .andExpect(jsonPath("$.username").value("mama_arseniya"))
             }
@@ -105,7 +122,7 @@ class ApiFlowTest : FeatureSpec() {
                 mvc.perform(
                     post("/api/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"username":"mama","password":"12"}""")
+                        .content("""{"username":"mama","password":"12","email":"mama@test.local"}""")
                 ).andExpect(status().isBadRequest)
                     .andExpect(jsonPath("$.error").value("Пароль — минимум 4 символа"))
             }
@@ -115,7 +132,7 @@ class ApiFlowTest : FeatureSpec() {
                 mvc.perform(
                     post("/api/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""{"username":"MAMA","password":"1234"}""")
+                        .content("""{"username":"MAMA","password":"1234","email":"mama2@test.local"}""")
                 ).andExpect(status().isConflict)
                     .andExpect(jsonPath("$.error").value("Такой логин уже занят"))
             }
@@ -170,6 +187,86 @@ class ApiFlowTest : FeatureSpec() {
             }
         }
 
+        feature("Сброс пароля по e-mail") {
+            scenario("полный цикл: forgot выдаёт код, reset меняет пароль") {
+                register("mama") // e-mail mama@test.local
+                mvc.perform(
+                    post("/api/password/forgot")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"email":"mama@test.local"}""")
+                ).andExpect(status().isOk)
+                    .andExpect(jsonPath("$.ok").value(true))
+
+                val code = users.findByEmail("mama@test.local")!!.resetCode!!
+
+                mvc.perform(
+                    post("/api/password/reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"email":"mama@test.local","code":"$code","password":"newpass"}""")
+                ).andExpect(status().isOk)
+                    .andExpect(jsonPath("$.ok").value(true))
+
+                // старый пароль больше не подходит
+                mvc.perform(
+                    post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"username":"mama","password":"1234"}""")
+                ).andExpect(status().isUnauthorized)
+
+                // новый пароль работает
+                mvc.perform(
+                    post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"username":"mama","password":"newpass"}""")
+                ).andExpect(status().isOk)
+
+                // код одноразовый — обнулён после использования
+                users.findByEmail("mama@test.local")!!.resetCode shouldBe null
+            }
+
+            scenario("forgot на несуществующий e-mail всё равно отвечает ok") {
+                mvc.perform(
+                    post("/api/password/forgot")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"email":"ghost@test.local"}""")
+                ).andExpect(status().isOk)
+                    .andExpect(jsonPath("$.ok").value(true))
+            }
+
+            scenario("неверный код отклоняется с 400") {
+                register("mama")
+                mvc.perform(
+                    post("/api/password/forgot")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"email":"mama@test.local"}""")
+                ).andExpect(status().isOk)
+
+                mvc.perform(
+                    post("/api/password/reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"email":"mama@test.local","code":"wrong","password":"newpass"}""")
+                ).andExpect(status().isBadRequest)
+                    .andExpect(jsonPath("$.error").value("Неверный код"))
+            }
+
+            scenario("повторные запросы forgot на один e-mail упираются в лимит (429)") {
+                register("flood") // e-mail flood@test.local, лимит 3 письма / 15 мин
+                repeat(3) {
+                    mvc.perform(
+                        post("/api/password/forgot")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"email":"flood@test.local"}""")
+                    ).andExpect(status().isOk)
+                }
+                mvc.perform(
+                    post("/api/password/forgot")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"email":"flood@test.local"}""")
+                ).andExpect(status().isTooManyRequests)
+                    .andExpect(jsonPath("$.error").value("Слишком много запросов. Попробуйте позже"))
+            }
+        }
+
         feature("Сессия") {
             scenario("logout инвалидирует сессию") {
                 val s = register("mama")
@@ -185,6 +282,200 @@ class ApiFlowTest : FeatureSpec() {
                 mvc.perform(get("/api/me"))
                     .andExpect(status().isOk)
                     .andExpect(jsonPath("$.username").value(nullValue()))
+            }
+        }
+
+        feature("Аккаунт") {
+            scenario("GET /account возвращает профиль текущего пользователя") {
+                val s = register("mama")
+                mvc.perform(get("/api/account").session(s))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.username").value("mama"))
+                    .andExpect(jsonPath("$.email").value("mama@test.local"))
+                    .andExpect(jsonPath("$.createdAt").isNotEmpty)
+            }
+
+            scenario("GET /account без сессии → 401") {
+                mvc.perform(get("/api/account"))
+                    .andExpect(status().isUnauthorized)
+                    .andExpect(jsonPath("$.error").value("Требуется вход"))
+            }
+
+            scenario("смена e-mail сохраняется") {
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/account/email").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"email":"new@test.local"}""")
+                ).andExpect(status().isOk)
+                    .andExpect(jsonPath("$.email").value("new@test.local"))
+
+                users.findByUsername("mama")!!.email shouldBe "new@test.local"
+            }
+
+            scenario("нельзя занять e-mail другого пользователя → 409") {
+                register("papa") // e-mail papa@test.local
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/account/email").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"email":"papa@test.local"}""")
+                ).andExpect(status().isConflict)
+                    .andExpect(jsonPath("$.error").value("Этот e-mail уже зарегистрирован"))
+            }
+
+            scenario("смена пароля: с верным текущим проходит, старый пароль перестаёт работать") {
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/account/password").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"currentPassword":"1234","newPassword":"newpass"}""")
+                ).andExpect(status().isOk)
+                    .andExpect(jsonPath("$.ok").value(true))
+
+                mvc.perform(
+                    post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"username":"mama","password":"newpass"}""")
+                ).andExpect(status().isOk)
+
+                mvc.perform(
+                    post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"username":"mama","password":"1234"}""")
+                ).andExpect(status().isUnauthorized)
+            }
+
+            scenario("смена пароля с неверным текущим → 401") {
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/account/password").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"currentPassword":"wrong","newPassword":"newpass"}""")
+                ).andExpect(status().isUnauthorized)
+                    .andExpect(jsonPath("$.error").value("Неверный текущий пароль"))
+            }
+        }
+
+        feature("Дети") {
+            scenario("создание ребёнка и список") {
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/children").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"name":"Арсений","birthDate":"2025-01-15"}""")
+                ).andExpect(status().isOk)
+                    .andExpect(jsonPath("$.name").value("Арсений"))
+                    .andExpect(jsonPath("$.birthDate").value("2025-01-15"))
+
+                mvc.perform(get("/api/children").session(s))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].name").value("Арсений"))
+            }
+
+            scenario("ребёнок без имени → 400") {
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/children").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"name":"   "}""")
+                ).andExpect(status().isBadRequest)
+                    .andExpect(jsonPath("$.error").value("Укажите имя ребёнка"))
+            }
+
+            scenario("некорректная дата рождения → 400") {
+                val s = register("mama")
+                mvc.perform(
+                    post("/api/children").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"name":"Арсений","birthDate":"15.01.2025"}""")
+                ).andExpect(status().isBadRequest)
+                    .andExpect(jsonPath("$.error").value("Некорректная дата рождения"))
+            }
+
+            scenario("GET /children без сессии → 401") {
+                mvc.perform(get("/api/children"))
+                    .andExpect(status().isUnauthorized)
+            }
+
+            scenario("первый ребёнок забирает старую историю без привязки (миграция)") {
+                val s = register("mama")
+                val uid = users.findByUsername("mama")!!.id!!
+                // запись из старой схемы — без child_id
+                history.save(HistoryEntry(userId = uid, date = "2026-06-02"))
+
+                val cid = addChild(s, "Арсений")
+
+                mvc.perform(get("/api/history").session(s).param("childId", cid.toString()))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].child_id").value(cid.toInt()))
+            }
+
+            scenario("история разводится по детям") {
+                val s = register("mama")
+                val a = addChild(s, "Арсений")
+                val b = addChild(s, "Мира")
+
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = a))
+                ).andExpect(status().isOk)
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = b))
+                ).andExpect(status().isOk)
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-03", childId = b))
+                ).andExpect(status().isOk)
+
+                mvc.perform(get("/api/history").session(s).param("childId", a.toString()))
+                    .andExpect(jsonPath("$.length()").value(1))
+                mvc.perform(get("/api/history").session(s).param("childId", b.toString()))
+                    .andExpect(jsonPath("$.length()").value(2))
+            }
+
+            scenario("нельзя читать историю чужого ребёнка → 403") {
+                val mama = register("mama")
+                val papa = register("papa")
+                val papaChild = addChild(papa, "Чужой")
+
+                mvc.perform(get("/api/history").session(mama).param("childId", papaChild.toString()))
+                    .andExpect(status().isForbidden)
+                    .andExpect(jsonPath("$.error").value("Нет доступа к этому ребёнку"))
+            }
+
+            scenario("удаление ребёнка уносит его историю") {
+                val s = register("mama")
+                val cid = addChild(s, "Арсений")
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = cid))
+                ).andExpect(status().isOk)
+
+                mvc.perform(delete("/api/children/$cid").session(s))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.ok").value(true))
+
+                childrenRepo.findByUserIdOrderByCreatedAtAsc(users.findByUsername("mama")!!.id!!).size shouldBe 0
+                history.findByUserIdOrderByDateDesc(users.findByUsername("mama")!!.id!!).size shouldBe 0
+            }
+
+            scenario("один день для двух детей сохраняется без конфликта уникальности") {
+                val s = register("mama")
+                val a = addChild(s, "Арсений")
+                val b = addChild(s, "Мира")
+                // тот же день, оба ребёнка — обе записи должны существовать
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = a))
+                ).andExpect(status().isOk).andExpect(jsonPath("$.updated").value(false))
+                mvc.perform(
+                    post("/api/history").session(s)
+                        .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = b))
+                ).andExpect(status().isOk).andExpect(jsonPath("$.updated").value(false))
             }
         }
 
