@@ -91,7 +91,7 @@
       </div>
       <div class="field">
         <label>Дата рождения <span class="opt">— необязательно</span></label>
-        <input id="gateChildBirth" type="date" lang="ru-RU">
+        <input id="gateChildBirth" type="text" inputmode="numeric" placeholder="дд/мм/гггг" maxlength="10" oninput="maskDate(this)">
       </div>
       <button class="btn btn-primary" onclick="submitFirstChild()">Добавить</button>
       <div class="msg" id="childGateMsg"></div>
@@ -234,7 +234,7 @@
         </div>
         <div class="field">
           <label>Дата рождения <span class="opt">— необязательно</span></label>
-          <input id="newChildBirth" type="date" lang="ru-RU">
+          <input id="newChildBirth" type="text" inputmode="numeric" placeholder="дд/мм/гггг" maxlength="10" oninput="maskDate(this)">
         </div>
         <button class="btn btn-primary" onclick="addChild()">Добавить ребёнка</button>
         <div class="msg" id="accChildMsg"></div>
@@ -472,12 +472,31 @@ function showChildGate(){
   document.getElementById('gateChildBirth').value='';
   setMsg2('childGateMsg','');
 }
+/* Маска ввода даты дд/мм/гггг: оставляем цифры и расставляем слэши. */
+function maskDate(el){
+  const v=el.value.replace(/\D/g,'').slice(0,8);
+  el.value = v.length>4 ? v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4)
+           : v.length>2 ? v.slice(0,2)+'/'+v.slice(2)
+           : v;
+}
+/* дд/мм/гггг → ISO yyyy-mm-dd. '' → null (необязательно), кривой ввод → 'INVALID'. */
+function dmyToIso(str){
+  const s=(str||'').trim();
+  if(!s) return null;
+  const m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(!m) return 'INVALID';
+  const d=+m[1], mo=+m[2], y=+m[3];
+  const dt=new Date(y,mo-1,d);
+  if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d) return 'INVALID';
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
 async function submitFirstChild(){
   const name=document.getElementById('gateChildName').value.trim();
-  const birth=document.getElementById('gateChildBirth').value;
+  const birth=dmyToIso(document.getElementById('gateChildBirth').value);
   if(name.length<1){setMsg2('childGateMsg','Укажите имя ребёнка','err');return;}
+  if(birth==='INVALID'){setMsg2('childGateMsg','Дата рождения в формате дд/мм/гггг','err');return;}
   try{
-    const c=await api('POST','/children',{name,birthDate:birth||null});
+    const c=await api('POST','/children',{name,birthDate:birth});
     await loadChildren();
     currentChildId=String(c.id);
     localStorage.setItem('child:'+currentUser,currentChildId);
@@ -500,10 +519,11 @@ function renderChildren(){
 }
 async function addChild(){
   const name=document.getElementById('newChildName').value.trim();
-  const birth=document.getElementById('newChildBirth').value;
+  const birth=dmyToIso(document.getElementById('newChildBirth').value);
   if(name.length<1){setMsg2('accChildMsg','Укажите имя ребёнка','err');return;}
+  if(birth==='INVALID'){setMsg2('accChildMsg','Дата рождения в формате дд/мм/гггг','err');return;}
   try{
-    const c=await api('POST','/children',{name,birthDate:birth||null});
+    const c=await api('POST','/children',{name,birthDate:birth});
     document.getElementById('newChildName').value='';
     document.getElementById('newChildBirth').value='';
     await loadChildren();
