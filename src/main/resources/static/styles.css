@@ -73,6 +73,26 @@ html{scrollbar-color:rgba(184,167,240,.35) transparent;scrollbar-width:thin}
 
 /* ---------- auth ---------- */
 .auth-stage{min-height:74vh;display:flex;align-items:center;justify-content:center}
+/* Экран входа — две колонки: слева описание сервиса, справа форма. */
+#authStage{gap:54px;flex-wrap:wrap;padding:24px 0}
+#authStage .auth-card{flex:1 1 340px;margin:0}
+.auth-intro{flex:1 1 340px;max-width:440px}
+.auth-intro .eyebrow{display:inline-block;font-size:12px;letter-spacing:.5px;color:var(--lav);
+  background:rgba(185,167,240,.12);border:1px solid var(--stroke);border-radius:999px;padding:6px 14px;margin-bottom:20px}
+.auth-intro h2{font-family:'Fraunces',serif;font-weight:500;font-size:30px;line-height:1.2;margin-bottom:14px}
+.auth-intro>p{color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:26px}
+.auth-feats{list-style:none;display:flex;flex-direction:column;gap:16px}
+.auth-feat{display:flex;gap:13px;align-items:flex-start}
+.auth-feat .ic{flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;background:rgba(255,255,255,.05);border:1px solid var(--stroke)}
+.auth-feat>div{display:flex;flex-direction:column;gap:2px}
+.auth-feat b{font-weight:500;font-size:14.5px;color:var(--ink);line-height:1.2}
+.auth-feat>div span{font-size:12.5px;color:var(--faint);line-height:1.45}
+@media(max-width:600px){
+  #authStage{gap:30px;padding:8px 0}
+  .auth-intro{flex-basis:100%;max-width:none}
+  .auth-intro h2{font-size:25px}
+}
 .auth-card{position:relative;overflow:hidden;width:100%;max-width:430px;background:var(--glass);backdrop-filter:blur(22px);
   border:1px solid var(--stroke);border-radius:26px;padding:38px 34px;
   box-shadow:0 40px 90px -40px rgba(0,0,0,.7)}

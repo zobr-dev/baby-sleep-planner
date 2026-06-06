@@ -15,6 +15,7 @@ class PlannerPage {
     private val app = element("#app")
     private val whoBox = element("#whoBox")
     private val whoName = element("#whoName")
+    private val childSelect = element("#childSelect")
     private val wakeSlider = element("#wh")
     private val wakeLabel = element("#whVal")
     private val napCount = element("#napCount")
@@ -23,6 +24,7 @@ class PlannerPage {
     private val toast = element("#toast")
     private val saveBtn = element("button[onclick='saveCalc()']")
     private val clearBtn = element("button[onclick='clearFields()']")
+    private val accountBtn = element("button[onclick='openAccount()']")
     private val logoutBtn = element("button[onclick='logout()']")
     private val historyItems = elements(".hitem")
     private val histEmpty = element(".hist-empty")
@@ -38,7 +40,18 @@ class PlannerPage {
         return this
     }
 
+    fun childSelectShouldBeHidden(): PlannerPage {
+        childSelect.shouldNotBe(visible)
+        return this
+    }
+
+    fun childSelectShouldBeVisible(): PlannerPage {
+        childSelect.shouldBe(visible)
+        return this
+    }
+
     // --- живой расчёт ---
+    // Ползунки минутные (step=5): значение 720 = «12 ч», один шаг вправо = «12 ч 5 м».
 
     fun nudgeWakeSliderRight(): PlannerPage {
         wakeSlider.sendKeys(Keys.ARROW_RIGHT)
@@ -66,14 +79,31 @@ class PlannerPage {
         return this
     }
 
-    /** Ставит время подъёма и шлёт нативный input-событие, как при вводе в UI. */
+    /** Ставит время подъёма и шлёт нативное input-событие, как при вводе в UI. */
     fun setMorningWake(v: String): PlannerPage {
-        executeJavaScript<Any?>(
-            "var e=document.getElementById('mw');e.value=arguments[0];" +
-                "e.dispatchEvent(new Event('input'));",
-            v
-        )
+        dispatchInput("mw", v)
         return this
+    }
+
+    /** Очищает обязательное поле утреннего подъёма — должен появиться баннер ошибки. */
+    fun clearMorningWake(): PlannerPage {
+        dispatchInput("mw", "")
+        return this
+    }
+
+    /** Заполняет время первого сна (засыпание/пробуждение) — делает сны «полными». */
+    fun setFirstNap(start: String, end: String): PlannerPage {
+        dispatchInput("ns0", start)
+        dispatchInput("ne0", end)
+        return this
+    }
+
+    private fun dispatchInput(id: String, v: String) {
+        executeJavaScript<Any?>(
+            "var e=document.getElementById(arguments[0]);e.value=arguments[1];" +
+                "e.dispatchEvent(new Event('input'));",
+            id, v
+        )
     }
 
     // --- валидация ---
@@ -125,6 +155,11 @@ class PlannerPage {
     fun emptyHistoryShouldBeVisible(): PlannerPage {
         histEmpty.shouldBe(visible)
         return this
+    }
+
+    fun openAccount(): AccountPage {
+        accountBtn.click()
+        return AccountPage().shouldBeVisible()
     }
 
     fun logout(): AuthPage {
