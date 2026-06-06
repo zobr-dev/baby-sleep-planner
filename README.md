@@ -144,6 +144,42 @@ IDE сама подтянет зависимости и предложит за�
 - На проде рекомендуется `JPA_DDL_AUTO=validate` и миграции схемы через Flyway/Liquibase
   вместо авто-`update`.
 
+## Обновление на VPS
+
+Прод на VPS поднят через `docker-compose.prod.yml`: образ приложения собирается из
+исходников по `Dockerfile`, данные БД лежат в именованном томе `pgdata`, наружу
+сервис отдаёт nginx по HTTPS. Цикл обновления:
+
+```bash
+ssh user@your-vps
+cd /path/to/baby-sleep-planner
+git pull origin master                                   # свежий код
+docker compose -f docker-compose.prod.yml up -d --build  # пересборка + рестарт
+docker compose -f docker-compose.prod.yml logs -f app    # логи запуска
+```
+
+Важно:
+
+- **`--build` обязателен** — без него Compose поднимет старый образ и новый код не
+  подхватится. Один лишь `git pull` ничего не меняет.
+- **Данные БД не теряются** — том `pgdata` при пересборке не трогается. Схема
+  догоняется на старте (JPA `ddl-auto=update` + `HistorySchemaMigration`).
+- **`.env` на сервере остаётся как есть** (в репозитории его нет). Если в обновлении
+  появились новые переменные окружения — впишите их в `.env` до пересборки.
+
+Полезное:
+
+```bash
+# Бэкап БД перед обновлением
+docker compose -f docker-compose.prod.yml exec db pg_dump -U sleep sleepplanner > backup_$(date +%F).sql
+
+# Откат на прошлый рабочий коммит
+git checkout <hash> && docker compose -f docker-compose.prod.yml up -d --build
+
+docker image prune -f                                    # чистка старых образов
+docker compose -f docker-compose.prod.yml ps             # статус контейнеров
+```
+
 ## Безопасность
 
 - Пароли — только BCrypt-хеш, в открытом виде не хранятся.
