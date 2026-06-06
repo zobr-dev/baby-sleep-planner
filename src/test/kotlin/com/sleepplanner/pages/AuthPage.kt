@@ -5,15 +5,18 @@ import com.codeborne.selenide.Condition.visible
 import com.codeborne.selenide.Selenide.element
 import com.codeborne.selenide.Selenide.open
 
-/** Экран авторизации: вход и регистрация. */
+/** Экран авторизации: вход, регистрация и сброс пароля по e-mail. */
 class AuthPage {
     private val stage = element("#authStage")
     private val user = element("#loginUser")
+    private val emailInput = element("#loginEmail")
+    private val code = element("#loginCode")
     private val pass = element("#loginPass")
     private val pass2 = element("#loginPass2")
-    private val submit = element("#authBtn")
+    private val submitBtn = element("#authBtn")
     private val message = element("#authMsg")
-    private val toggle = element("#switcher a")
+    private val toRegister = element("#switcher a")
+    private val forgot = element("#forgotLink a")
 
     fun open(): AuthPage {
         open("/")
@@ -26,10 +29,16 @@ class AuthPage {
     }
 
     fun goToRegister(): AuthPage {
-        toggle.click()
+        toRegister.click()
         return this
     }
 
+    fun goToForgot(): AuthPage {
+        forgot.click()
+        return this
+    }
+
+    /** Заполняет логин и пароль (поле подтверждения — для режима регистрации). */
     fun fill(login: String, password: String, confirm: String = password): AuthPage {
         user.setValue(login)
         pass.setValue(password)
@@ -37,8 +46,18 @@ class AuthPage {
         return this
     }
 
+    fun fillEmail(value: String): AuthPage {
+        emailInput.setValue(value)
+        return this
+    }
+
+    fun fillCode(value: String): AuthPage {
+        code.setValue(value)
+        return this
+    }
+
     fun submit(): AuthPage {
-        submit.click()
+        submitBtn.click()
         return this
     }
 
@@ -47,9 +66,21 @@ class AuthPage {
         return this
     }
 
-    /** Happy-path регистрация: переключается в режим, заполняет, отправляет и ждёт приложение. */
-    fun register(login: String, password: String = "1234"): PlannerPage {
-        goToRegister().fill(login, password).submit()
-        return PlannerPage().shouldBeLoaded(login)
+    /**
+     * Регистрация: переключается в режим регистрации, заполняет логин, e-mail, пароль
+     * и отправляет. После успеха фронт ведёт на экран добавления первого ребёнка.
+     */
+    fun register(login: String, password: String = "1234"): ChildGatePage {
+        goToRegister()
+        user.setValue(login)
+        emailInput.setValue("$login@test.local")
+        pass.setValue(password)
+        pass2.setValue(password)
+        submitBtn.click()
+        return ChildGatePage().shouldBeVisible()
     }
+
+    /** Полный happy-path: регистрация + добавление ребёнка → основное приложение. */
+    fun registerAndEnter(login: String, child: String = "Малыш"): PlannerPage =
+        register(login).addChild(child).shouldBeLoaded(login)
 }
