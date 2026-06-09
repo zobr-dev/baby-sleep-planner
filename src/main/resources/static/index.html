@@ -117,11 +117,6 @@
         <h3>🌤️ Параметры дня</h3>
         <p class="ph-sub">Меняйте значения — расчёт обновляется сразу</p>
 
-        <div class="field">
-          <label>Фактическое время утреннего подъема <span class="req">— обязательно</span></label>
-          <input type="time" id="mw" value="07:00" lang="ru-RU" oninput="calc()">
-        </div>
-
         <!-- Параметры расчёта скрыты по умолчанию, раскрываются по кнопке. -->
         <button type="button" class="cfg-toggle" id="cfgToggle" onclick="toggleParams()" aria-expanded="false" aria-controls="cfgParams">
           <span>⚙️ Параметры расчёта</span>
@@ -147,6 +142,11 @@
           </div>
         </div>
 
+        <div class="field">
+          <label>Фактическое время утреннего подъема <span class="req">— обязательно</span></label>
+          <input type="time" id="mw" value="07:00" lang="ru-RU" oninput="calc()">
+        </div>
+
         <div id="napRows"></div>
         <div class="field-hint" style="margin-top:-4px;margin-bottom:14px">Время снов можно не заполнять — покажем рекомендации по подъёму и ползункам. Заполните, чтобы сравнить с фактом и сохранить в историю.</div>
 
@@ -159,7 +159,7 @@
         <div class="actions">
           <div class="field">
             <label style="margin-bottom:7px">Дата расчёта</label>
-            <input type="date" id="histDate" lang="ru-RU">
+            <input type="text" id="histDate" inputmode="numeric" placeholder="дд/мм/гггг" maxlength="10" oninput="maskDate(this)">
           </div>
           <button class="icon-btn" style="align-self:flex-end" data-tip="Сохранить в историю" aria-label="Сохранить в историю" onclick="saveCalc()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
@@ -418,7 +418,7 @@ async function startSession(u){
 function enterApp(){
   document.getElementById('childGate').style.display='none';
   document.getElementById('app').style.display='block';
-  const d=new Date();document.getElementById('histDate').value=d.toISOString().slice(0,10);
+  const d=new Date();document.getElementById('histDate').value=fmtDate(d.toISOString().slice(0,10));
   populateChildSelect();
   loadCfg();
   renderHistory();
@@ -767,7 +767,10 @@ function calc(){
     }
   }
 
-  const DEF=90;
+  // Примерная длительность одного дневного сна, когда факт не указан (зависит от числа снов):
+  // 4 сна — по 1 ч, 3 — по 1 ч 15 м, 2 — по 1 ч 30 м, 1 — 2 ч 30 м.
+  const NAP_DUR_DEF={1:150,2:90,3:75,4:60};
+  const DEF=NAP_DUR_DEF[N]||90;
   const durs=naps.map(n=>(Number.isFinite(n.s)&&Number.isFinite(n.e)&&n.e>n.s)?(n.e-n.s):DEF);
   const napTotal=durs.reduce((a,b)=>a+b,0);
   ok();
@@ -923,8 +926,9 @@ function clearFields(){
 async function saveCalc(){
   if(!last){toast('Сначала исправьте параметры');return;}
   if(!currentChildId){toast('Сначала добавьте ребёнка');return;}
-  const date=document.getElementById('histDate').value;
+  const date=dmyToIso(document.getElementById('histDate').value);
   if(!date){toast('Выберите дату');return;}
+  if(date==='INVALID'){toast('Дата в формате дд/мм/гггг');return;}
   try{
     const res=await api('POST','/history',Object.assign({date,childId:Number(currentChildId)},last));
     toast(res.updated?'Запись за '+fmtDate(date)+' обновлена':'Сохранено в историю');
@@ -1034,7 +1038,7 @@ async function loadRec(date){
   let naps=[];try{naps=JSON.parse(h.naps_json||'[]');}catch(e){}
   naps.forEach((n,i)=>{const a=document.getElementById('ns'+i),b=document.getElementById('ne'+i);if(a)a.value=n.s;if(b)b.value=n.e;});
   document.getElementById('an').value=h.actual_night||'';
-  document.getElementById('histDate').value=h.date;
+  document.getElementById('histDate').value=fmtDate(h.date);
   calc();
   window.scrollTo({top:0,behavior:'smooth'});
   toast('Загружен расчёт за '+fmtDate(date));
