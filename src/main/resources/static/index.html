@@ -164,6 +164,9 @@
           <button class="icon-btn" style="align-self:flex-end" data-tip="Сохранить в историю" aria-label="Сохранить в историю" onclick="saveCalc()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
           </button>
+          <button class="icon-btn" style="align-self:flex-end" data-tip="Загрузить последние данные" aria-label="Загрузить последние данные" onclick="loadLast()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          </button>
           <button class="icon-btn" style="align-self:flex-end" data-tip="Очистить поля" aria-label="Очистить поля" onclick="clearFields()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>
           </button>
@@ -1008,6 +1011,16 @@ async function loadRec(date){
   calc();
   window.scrollTo({top:0,behavior:'smooth'});
   toast('Загружен расчёт за '+fmtDate(date));
+}
+/* Загрузить в форму самую свежую сохранённую запись текущего ребёнка. */
+async function loadLast(){
+  if(!currentChildId){ toast('Сначала добавьте ребёнка'); return; }
+  let rows=[];
+  try{ rows=await api('GET','/history'+childQuery()); }catch(e){ toast(e.message); return; }
+  if(!rows.length){ toast('Нет сохранённых данных'); return; }
+  // даты в формате ISO yyyy-mm-dd сравниваются лексикографически — берём максимум.
+  const latest=rows.reduce((a,b)=>b.date>a.date?b:a);
+  loadRec(latest.date);
 }
 async function delRec(date){
   try{ await api('DELETE','/history/'+encodeURIComponent(date)+childQuery()); toast('Запись удалена'); }
