@@ -117,28 +117,34 @@
         <h3>🌤️ Параметры дня</h3>
         <p class="ph-sub">Меняйте значения — расчёт обновляется сразу</p>
 
-        <div class="slider-field">
-          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое общее бодрствование за день</label><span class="val" id="whVal">12 ч</span></div>
-          <input type="range" id="wh" min="480" max="960" step="5" value="720" oninput="calc()">
-        </div>
-        <div class="slider-field">
-          <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 ч</span></div>
-          <input type="range" id="fw" min="180" max="480" step="5" value="360" oninput="calc()">
-        </div>
-
         <div class="field">
           <label>Фактическое время утреннего подъема <span class="req">— обязательно</span></label>
           <input type="time" id="mw" value="07:00" lang="ru-RU" oninput="calc()">
         </div>
 
-        <div class="field">
-          <label>Количество дневных снов</label>
-          <select id="napCount" onchange="buildNaps();calc()">
-            <option value="1">1 дневной сон</option>
-            <option value="2">2 дневных сна</option>
-            <option value="3">3 дневных сна</option>
-            <option value="4">4 дневных сна</option>
-          </select>
+        <!-- Параметры расчёта скрыты по умолчанию, раскрываются по кнопке. -->
+        <button type="button" class="cfg-toggle" id="cfgToggle" onclick="toggleParams()" aria-expanded="false" aria-controls="cfgParams">
+          <span>⚙️ Параметры расчёта</span>
+          <span class="cfg-caret">▾</span>
+        </button>
+        <div class="cfg-collapse" id="cfgParams" hidden>
+          <div class="slider-field">
+            <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое общее бодрствование за день</label><span class="val" id="whVal">12 ч</span></div>
+            <input type="range" id="wh" min="480" max="960" step="5" value="720" oninput="calc()">
+          </div>
+          <div class="slider-field">
+            <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 ч</span></div>
+            <input type="range" id="fw" min="180" max="480" step="5" value="360" oninput="calc()">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Количество дневных снов</label>
+            <select id="napCount" onchange="buildNaps();calc()">
+              <option value="1">1 дневной сон</option>
+              <option value="2">2 дневных сна</option>
+              <option value="3">3 дневных сна</option>
+              <option value="4">4 дневных сна</option>
+            </select>
+          </div>
         </div>
 
         <div id="napRows"></div>
@@ -638,6 +644,16 @@ const fh=m=>{if(!Number.isFinite(m))return '—';const h=Math.floor(m/60),mm=Mat
 
 /* ---------- core calculation ---------- */
 let last=null;
+
+/* Показ/скрытие блока параметров расчёта по кнопке. */
+function toggleParams(){
+  const box=document.getElementById('cfgParams');
+  const btn=document.getElementById('cfgToggle');
+  const open=box.hasAttribute('hidden');
+  if(open) box.removeAttribute('hidden'); else box.setAttribute('hidden','');
+  btn.setAttribute('aria-expanded', open?'true':'false');
+  btn.classList.toggle('open', open);
+}
 
 function buildNaps(){
   const n=parseInt(document.getElementById('napCount').value);
