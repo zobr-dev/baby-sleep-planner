@@ -130,15 +130,15 @@
         <div class="cfg-collapse" id="cfgParams" hidden>
           <div class="slider-field">
             <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое общее бодрствование за день</label><span class="val" id="whVal">12 ч</span></div>
-            <input type="range" id="wh" min="480" max="960" step="5" value="720" oninput="calc()">
+            <input type="range" id="wh" min="480" max="960" step="5" value="720" oninput="onSlide()">
           </div>
           <div class="slider-field">
             <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 ч</span></div>
-            <input type="range" id="fw" min="180" max="480" step="5" value="360" oninput="calc()">
+            <input type="range" id="fw" min="60" max="480" step="5" value="360" oninput="onSlide()">
           </div>
           <div class="field" style="margin-bottom:0">
             <label>Количество дневных снов</label>
-            <select id="napCount" onchange="buildNaps();calc()">
+            <select id="napCount" onchange="onNapChange()">
               <option value="1">1 дневной сон</option>
               <option value="2">2 дневных сна</option>
               <option value="3">3 дневных сна</option>
@@ -416,8 +416,7 @@ function enterApp(){
   document.getElementById('app').style.display='block';
   const d=new Date();document.getElementById('histDate').value=d.toISOString().slice(0,10);
   populateChildSelect();
-  buildNaps();
-  calc();
+  loadCfg();
   renderHistory();
 }
 async function logout(){
@@ -479,6 +478,7 @@ function populateChildSelect(){
 async function switchChild(id){
   currentChildId=String(id);
   localStorage.setItem('child:'+currentUser,currentChildId);
+  loadCfg();                 // у каждого ребёнка своя запомненная шкала
   await renderHistory();
 }
 function showChildGate(){
@@ -644,6 +644,53 @@ const fh=m=>{if(!Number.isFinite(m))return '—';const h=Math.floor(m/60),mm=Mat
 
 /* ---------- core calculation ---------- */
 let last=null;
+
+/* Дефолтные шкалы под количество снов (мин): общее бодрствование / между снами. */
+const NAP_DEFAULTS={
+  1:{wh:720,fw:360}, // 12 ч / 6 ч
+  2:{wh:680,fw:210}, // 11 ч 20 м / 3 ч 30 м
+  3:{wh:630,fw:130}, // 10 ч 30 м / 2 ч 10 м
+  4:{wh:600,fw:90}   // 10 ч / 1 ч 30 м
+};
+/* Ключ хранения последней выбранной шкалы для пары аккаунт+ребёнок. */
+function cfgKey(){ return 'cfg:'+currentUser+':'+currentChildId; }
+/* Запомнить текущие значения параметров расчёта. */
+function saveCfg(){
+  if(!currentUser||!currentChildId) return;
+  const cfg={
+    wh:parseInt(document.getElementById('wh').value),
+    fw:parseInt(document.getElementById('fw').value),
+    napCount:parseInt(document.getElementById('napCount').value)
+  };
+  try{ localStorage.setItem(cfgKey(),JSON.stringify(cfg)); }catch(e){}
+}
+/* Применить шкалу к контролам и пересчитать. */
+function applyCfg(wh,fw,napCount){
+  document.getElementById('wh').value=wh;
+  document.getElementById('fw').value=fw;
+  document.getElementById('napCount').value=String(napCount);
+  buildNaps();
+  calc();
+}
+/* Восстановить запомненную шкалу ребёнка (или дефолт на 1 сон). */
+function loadCfg(){
+  let saved=null;
+  try{ saved=JSON.parse(localStorage.getItem(cfgKey())||'null'); }catch(e){}
+  if(saved&&saved.napCount){ applyCfg(saved.wh,saved.fw,saved.napCount); }
+  else{ const d=NAP_DEFAULTS[1]; applyCfg(d.wh,d.fw,1); }
+}
+/* Смена количества снов → подставить дефолтные бодрствования под это число. */
+function onNapChange(){
+  const n=parseInt(document.getElementById('napCount').value);
+  const d=NAP_DEFAULTS[n]||NAP_DEFAULTS[1];
+  document.getElementById('wh').value=d.wh;
+  document.getElementById('fw').value=d.fw;
+  buildNaps();
+  calc();
+  saveCfg();
+}
+/* Сдвиг ползунка → пересчёт + запоминание. */
+function onSlide(){ calc(); saveCfg(); }
 
 /* Показ/скрытие блока параметров расчёта по кнопке. */
 function toggleParams(){
@@ -864,6 +911,7 @@ function clearFields(){
   buildNaps();
   document.querySelectorAll('#napRows input').forEach(inp=>inp.value='');
   calc();
+  saveCfg();                 // сброс к 1 сну тоже запоминаем
   toast('Поля очищены');
 }
 
