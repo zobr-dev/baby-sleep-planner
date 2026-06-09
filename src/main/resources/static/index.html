@@ -232,6 +232,7 @@
       <div class="hist-metrics" id="histMetrics"></div>
       <p class="hist-cap" id="histCap"></p>
       <div id="histList"></div>
+      <div class="hist-pager" id="histPager"></div>
     </div>
   </div>
 
@@ -947,11 +948,13 @@ function periodStats(rows,days){
   });
   return {wakeAvg:wn?ws/wn:null,wakeN:wn,nightAvg:nn?ns/nn:null,nightN:nn,dayAvg:dn?ds/dn:null,dayN:dn};
 }
-let histPeriod=7, histRows=[];
+let histPeriod=7, histRows=[], histPageList=0;
 function setHistPeriod(d){
   histPeriod=d;
+  histPageList=0;            // размер страницы = периоду таба → сбрасываем на первую
   document.querySelectorAll('#histTabs .htab').forEach(b=>b.classList.toggle('active',+b.dataset.days===d));
   renderMetrics();
+  renderHistList();
 }
 function renderMetrics(){
   const s=periodStats(histRows,histPeriod);
@@ -977,13 +980,28 @@ async function renderHistory(){
   let rows=[];
   try{ rows=await api('GET','/history'+childQuery()); }catch(e){ rows=[]; }
   histRows=rows;
+  histPageList=0;            // после обновления списка — на первую страницу (свежие записи)
   renderMetrics();
   document.getElementById('histCap').textContent =
     'Ночной сон — по фактической длительности; бодрствование — факт, где указан уход в ночь, иначе плановое. Записи старше 90 дней удаляются автоматически.';
-
+  renderHistList();
+}
+/* Постраничный вывод списка: размер страницы = выбранному периоду (7 или 30). */
+function renderHistList(){
   const el=document.getElementById('histList');
-  if(!rows.length){el.innerHTML='<div class="hist-empty">Пока нет сохранённых дней.<br>Рассчитайте режим и нажмите «Сохранить в историю».</div>';return;}
-  el.innerHTML=rows.map(h=>`
+  const pager=document.getElementById('histPager');
+  const rows=histRows;
+  if(!rows.length){
+    el.innerHTML='<div class="hist-empty">Пока нет сохранённых дней.<br>Рассчитайте режим и нажмите «Сохранить в историю».</div>';
+    pager.innerHTML='';
+    return;
+  }
+  const size=histPeriod;
+  const pages=Math.ceil(rows.length/size);
+  histPageList=Math.min(Math.max(histPageList,0),pages-1);
+  const start=histPageList*size;
+  const slice=rows.slice(start,start+size);
+  el.innerHTML=slice.map(h=>`
     <div class="hitem fade" onclick="loadRec('${h.date}')">
       <div class="hdate">${fmtDate(h.date)}<small>${h.nap_count} ${napWord(h.nap_count)} · план ${fh(h.wh*60)}</small></div>
       <div class="htimes">
@@ -994,7 +1012,16 @@ async function renderHistory(){
       </div>
       <button class="hdel" onclick="event.stopPropagation();delRec('${h.date}')" title="Удалить">✕</button>
     </div>`).join('');
+  if(pages>1){
+    pager.innerHTML=
+      `<button class="hpage-btn" ${histPageList===0?'disabled':''} onclick="histGoPage(${histPageList-1})" aria-label="Предыдущая страница">←</button>`+
+      `<span class="hpage-info">${histPageList+1} / ${pages}</span>`+
+      `<button class="hpage-btn" ${histPageList>=pages-1?'disabled':''} onclick="histGoPage(${histPageList+1})" aria-label="Следующая страница">→</button>`;
+  }else{
+    pager.innerHTML='';
+  }
 }
+function histGoPage(p){ histPageList=p; renderHistList(); }
 async function loadRec(date){
   let rows=[];
   try{ rows=await api('GET','/history'+childQuery()); }catch(e){ return; }
