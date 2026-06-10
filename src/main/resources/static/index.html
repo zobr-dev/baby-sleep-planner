@@ -817,7 +817,9 @@ function calc(){
       if(fd===0) meta=`Факт совпадает с рекомендацией (${m2t(naps[i].s)})`;
       else meta=`Рекоменд.: ${m2t(rn.s)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`; }
     const label=N>1?`☀️ Засыпание на ${ord[i]} дневной сон`:'☀️ Засыпание на дневной сон';
-    return `<div class="rcard nap">${napSvg}<div class="rlabel">${label}</div><div class="rtime">${m2t(rn.s)}</div><div class="rmeta">${meta}</div></div>`;
+    // Крупное значение — фактическое засыпание, если указано; иначе рекомендованное.
+    const shown=hasAct?naps[i].s:rn.s;
+    return `<div class="rcard nap">${napSvg}<div class="rlabel">${label}</div><div class="rtime">${m2t(shown)}</div><div class="rmeta">${meta}</div></div>`;
   }).join('');
 
   const est=!napsComplete;
