@@ -214,6 +214,32 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 3px 12px rgba(0,0,0,.45),0 0 0 9px rgba(185,167,240,.18)}
 input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--lav);cursor:pointer;box-shadow:0 0 0 6px rgba(185,167,240,.12)}
 
+/* locked slider field (when advanced mode overrides it) */
+.slider-field.locked{opacity:.45;filter:grayscale(.4)}
+.slider-field.locked input[type=range]{pointer-events:none}
+
+/* ---------- toggle switch ---------- */
+.switch{position:relative;display:inline-flex;flex:none;cursor:pointer}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.switch-track{display:inline-block;width:42px;height:24px;border-radius:999px;
+  background:var(--glass-2);border:1px solid var(--stroke);transition:background .2s,border-color .2s}
+.switch-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+  background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.4);transition:transform .2s}
+.switch input:checked + .switch-track{background:linear-gradient(90deg,var(--lav),var(--rose));border-color:var(--stroke-2)}
+.switch input:checked + .switch-track .switch-knob{transform:translateX(18px)}
+
+/* ---------- advanced settings toggle row (main panel) ---------- */
+.adv-row{display:flex;align-items:center;gap:11px;margin:0 0 18px}
+.adv-row-label{font-size:13.5px;color:var(--ink)}
+.adv-open-btn{margin-left:auto;padding:7px 14px;font-size:13px}
+
+/* ---------- advanced settings page ---------- */
+.adv-enable{display:flex;align-items:center;gap:11px;margin:6px 0 20px;
+  padding:12px 14px;border-radius:var(--r-sm);background:var(--glass);border:1px solid var(--stroke)}
+.adv-state{margin-left:auto;font-size:13px;color:var(--muted)}
+.adv-section{margin-bottom:22px}
+.adv-h{font-family:'Fraunces',serif;font-weight:500;font-size:16px;color:var(--lav-soft);margin-bottom:14px}
+
 /* result cards */
 .results{display:flex;flex-direction:column;gap:16px}
 #napCards{display:contents}

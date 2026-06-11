@@ -131,6 +131,15 @@
             <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 ч</span></div>
             <input type="range" id="fw" min="60" max="480" step="5" value="360" oninput="onSlide()">
           </div>
+          <!-- Расширенный режим: своя шкала для каждого бодрствования и каждого сна. -->
+          <div class="adv-row">
+            <label class="switch">
+              <input type="checkbox" id="advToggle" onchange="onAdvToggle(this)">
+              <span class="switch-track"><span class="switch-knob"></span></span>
+            </label>
+            <span class="adv-row-label">Расширенные настройки</span>
+            <button type="button" class="btn btn-ghost adv-open-btn" onclick="openAdv()">Настроить →</button>
+          </div>
           <div class="field" style="margin-bottom:0">
             <label>Количество дневных снов</label>
             <select id="napCount" onchange="onNapChange()">
@@ -233,6 +242,36 @@
       <p class="hist-cap" id="histCap"></p>
       <div id="histList"></div>
       <div class="hist-pager" id="histPager"></div>
+    </div>
+  </div>
+
+  <!-- ===== ADVANCED PLANNER SETTINGS ===== -->
+  <div class="auth-stage" id="advStage" style="display:none">
+    <div class="auth-card fade" style="max-width:560px">
+      <h2>Расширенные настройки</h2>
+      <p class="sub">Задайте планируемое время каждого бодрствования и длительность каждого сна. Пока расширенный режим включён, эти значения используются во всех расчётах вместо общего «времени бодрствования между снами».</p>
+
+      <div class="adv-enable">
+        <label class="switch">
+          <input type="checkbox" id="advToggle2" onchange="onAdvToggle(this)">
+          <span class="switch-track"><span class="switch-knob"></span></span>
+        </label>
+        <span class="adv-row-label">Расширенный режим</span>
+        <span class="adv-state" id="advState">выключен</span>
+      </div>
+
+      <div class="adv-section">
+        <h4 class="adv-h">🌤️ Бодрствование</h4>
+        <div id="advWakeFields"></div>
+      </div>
+      <div class="adv-section">
+        <h4 class="adv-h">😴 Дневные сны</h4>
+        <div id="advNapFields"></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveAdv()">Сохранить</button>
+      <div class="msg" id="advMsg"></div>
+      <div class="switcher"><a onclick="closeAdv()">← Назад к расчёту</a></div>
     </div>
   </div>
 
@@ -406,6 +445,7 @@ async function startSession(u){
   currentUser=u;
   document.getElementById('authStage').style.display='none';
   document.getElementById('accountStage').style.display='none';
+  document.getElementById('advStage').style.display='none';
   document.getElementById('childGate').style.display='none';
   document.getElementById('whoBox').style.display='flex';
   document.getElementById('whoName').textContent=u;
@@ -428,6 +468,7 @@ async function logout(){
   currentUser=null; children=[]; currentChildId=null;
   document.getElementById('app').style.display='none';
   document.getElementById('accountStage').style.display='none';
+  document.getElementById('advStage').style.display='none';
   document.getElementById('childGate').style.display='none';
   document.getElementById('childSelect').style.display='none';
   document.getElementById('whoBox').style.display='none';
@@ -488,6 +529,7 @@ async function switchChild(id){
 function showChildGate(){
   document.getElementById('app').style.display='none';
   document.getElementById('accountStage').style.display='none';
+  document.getElementById('advStage').style.display='none';
   document.getElementById('childGate').style.display='flex';
   document.getElementById('gateChildName').value='';
   document.getElementById('gateChildBirth').value='';
@@ -580,6 +622,7 @@ function setMsg2(id,m,type){const e=document.getElementById(id);e.textContent=m|
 
 async function openAccount(){
   document.getElementById('app').style.display='none';
+  document.getElementById('advStage').style.display='none';
   document.getElementById('accountStage').style.display='flex';
   setMsg2('accEmailMsg','');setMsg2('accPassMsg','');
   document.getElementById('accCurPass').value='';
@@ -606,6 +649,7 @@ function closeAccount(){
 function goHome(){
   if(!currentUser) return; // не залогинен — остаёмся на экране входа
   document.getElementById('accountStage').style.display='none';
+  document.getElementById('advStage').style.display='none';
   if(children.length){
     document.getElementById('childGate').style.display='none';
     document.getElementById('app').style.display='block';
@@ -656,45 +700,149 @@ const NAP_DEFAULTS={
   3:{wh:630,fw:130}, // 10 ч 30 м / 2 ч 10 м
   4:{wh:600,fw:90}   // 10 ч / 1 ч 30 м
 };
+/* Примерная длительность одного дневного сна по числу снов (мин). */
+const NAP_DUR_DEF={1:150,2:90,3:75,4:60};
+
+/* ---------- расширенный режим: своя шкала каждого бодрствования и сна ---------- */
+let advEnabled=false, advWakes=[], advDurs=[];
+/* Дефолты массивов под N снов: N+1 окон бодрствования (= текущий fw) и N длительностей. */
+function advDefaults(N){
+  const fwM=parseInt(document.getElementById('fw').value)||360;
+  const napDef=NAP_DUR_DEF[N]||90;
+  const wakes=[],durs=[];
+  for(let i=0;i<=N;i++) wakes.push(fwM);
+  for(let i=0;i<N;i++) durs.push(napDef);
+  return {wakes,durs};
+}
+/* Привести массивы к нужной длине, не теряя уже заданные значения. */
+function ensureAdvArrays(N){
+  const def=advDefaults(N);
+  for(let i=0;i<=N;i++){ if(typeof advWakes[i]!=='number') advWakes[i]=def.wakes[i]; }
+  advWakes.length=N+1;
+  for(let i=0;i<N;i++){ if(typeof advDurs[i]!=='number') advDurs[i]=def.durs[i]; }
+  advDurs.length=N;
+}
+/* Синхронизация UI расширенного режима: переключатели, подпись, блокировка fw. */
+function syncAdvUI(){
+  const t1=document.getElementById('advToggle'),t2=document.getElementById('advToggle2');
+  if(t1) t1.checked=advEnabled;
+  if(t2) t2.checked=advEnabled;
+  const st=document.getElementById('advState'); if(st) st.textContent=advEnabled?'включён':'выключен';
+  const fw=document.getElementById('fw');
+  if(fw){ fw.disabled=advEnabled; const f=fw.closest('.slider-field'); if(f) f.classList.toggle('locked',advEnabled); }
+}
+
 /* Ключ хранения последней выбранной шкалы для пары аккаунт+ребёнок. */
 function cfgKey(){ return 'cfg:'+currentUser+':'+currentChildId; }
-/* Запомнить текущие значения параметров расчёта. */
+/* Запомнить текущие значения параметров расчёта (включая расширенный режим). */
 function saveCfg(){
   if(!currentUser||!currentChildId) return;
   const cfg={
     wh:parseInt(document.getElementById('wh').value),
     fw:parseInt(document.getElementById('fw').value),
-    napCount:parseInt(document.getElementById('napCount').value)
+    napCount:parseInt(document.getElementById('napCount').value),
+    adv:{enabled:advEnabled,wakes:advWakes.slice(),durs:advDurs.slice()}
   };
   try{ localStorage.setItem(cfgKey(),JSON.stringify(cfg)); }catch(e){}
 }
-/* Применить шкалу к контролам и пересчитать. */
-function applyCfg(wh,fw,napCount){
-  document.getElementById('wh').value=wh;
-  document.getElementById('fw').value=fw;
+/* Применить сохранённую шкалу к контролам (или дефолт на 1 сон) и пересчитать. */
+function applyCfg(saved){
+  const napCount=(saved&&saved.napCount)||1;
+  const d=NAP_DEFAULTS[napCount]||NAP_DEFAULTS[1];
+  document.getElementById('wh').value=(saved&&saved.wh!=null)?saved.wh:d.wh;
+  document.getElementById('fw').value=(saved&&saved.fw!=null)?saved.fw:d.fw;
   document.getElementById('napCount').value=String(napCount);
+  const adv=saved&&saved.adv;
+  advEnabled=!!(adv&&adv.enabled);
+  advWakes=(adv&&Array.isArray(adv.wakes))?adv.wakes.slice():[];
+  advDurs =(adv&&Array.isArray(adv.durs)) ?adv.durs.slice() :[];
+  ensureAdvArrays(napCount);
+  syncAdvUI();
   buildNaps();
   calc();
 }
-/* Восстановить запомненную шкалу ребёнка (или дефолт на 1 сон). */
+/* Восстановить запомненную шкалу ребёнка. */
 function loadCfg(){
   let saved=null;
   try{ saved=JSON.parse(localStorage.getItem(cfgKey())||'null'); }catch(e){}
-  if(saved&&saved.napCount){ applyCfg(saved.wh,saved.fw,saved.napCount); }
-  else{ const d=NAP_DEFAULTS[1]; applyCfg(d.wh,d.fw,1); }
+  applyCfg(saved);
 }
-/* Смена количества снов → подставить дефолтные бодрствования под это число. */
+/* Смена количества снов → подставить дефолтные бодрствования и переразмерить массивы. */
 function onNapChange(){
   const n=parseInt(document.getElementById('napCount').value);
   const d=NAP_DEFAULTS[n]||NAP_DEFAULTS[1];
   document.getElementById('wh').value=d.wh;
   document.getElementById('fw').value=d.fw;
+  ensureAdvArrays(n);
   buildNaps();
   calc();
   saveCfg();
 }
 /* Сдвиг ползунка → пересчёт + запоминание. */
 function onSlide(){ calc(); saveCfg(); }
+
+/* ---------- advanced settings page ---------- */
+function onAdvToggle(src){
+  if(src) advEnabled=src.checked;
+  ensureAdvArrays(parseInt(document.getElementById('napCount').value));
+  syncAdvUI();
+  calc();
+  saveCfg();
+}
+function openAdv(){
+  ensureAdvArrays(parseInt(document.getElementById('napCount').value));
+  document.getElementById('app').style.display='none';
+  document.getElementById('accountStage').style.display='none';
+  document.getElementById('advStage').style.display='flex';
+  syncAdvUI();
+  renderAdvFields();
+  setMsg2('advMsg','');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function closeAdv(){
+  document.getElementById('advStage').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+/* Построить ползунки бодрствований (N+1) и длительностей снов (N) под текущее N. */
+function renderAdvFields(){
+  const N=parseInt(document.getElementById('napCount').value);
+  ensureAdvArrays(N);
+  const ord=['1-го','2-го','3-го','4-го','5-го'];
+  let wh='';
+  for(let i=0;i<=N;i++){
+    const label=i===0?'Бодрствование до 1-го сна'
+              :i===N?'Бодрствование после последнего сна (до ночи)'
+              :`Бодрствование между ${i}-м и ${i+1}-м снами`;
+    wh+=`<div class="slider-field">
+      <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">${label}</label><span class="val" id="awVal${i}">${fh(advWakes[i])}</span></div>
+      <input type="range" id="aw${i}" min="30" max="480" step="5" value="${advWakes[i]}" oninput="advWakeInput(${i})">
+    </div>`;
+  }
+  document.getElementById('advWakeFields').innerHTML=wh;
+  let nh='';
+  for(let i=0;i<N;i++){
+    nh+=`<div class="slider-field">
+      <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Длительность ${ord[i]||(i+1+'-го')} сна</label><span class="val" id="adVal${i}">${fh(advDurs[i])}</span></div>
+      <input type="range" id="ad${i}" min="20" max="240" step="5" value="${advDurs[i]}" oninput="advDurInput(${i})">
+    </div>`;
+  }
+  document.getElementById('advNapFields').innerHTML=nh;
+}
+function advWakeInput(i){
+  advWakes[i]=parseInt(document.getElementById('aw'+i).value);
+  document.getElementById('awVal'+i).textContent=fh(advWakes[i]);
+  if(advEnabled) calc();
+}
+function advDurInput(i){
+  advDurs[i]=parseInt(document.getElementById('ad'+i).value);
+  document.getElementById('adVal'+i).textContent=fh(advDurs[i]);
+  if(advEnabled) calc();
+}
+function saveAdv(){
+  saveCfg();
+  if(advEnabled) calc();
+  setMsg2('advMsg','Настройки сохранены','ok');
+}
 
 /* Показ/скрытие блока параметров расчёта по кнопке. */
 function toggleParams(){
@@ -767,24 +915,30 @@ function calc(){
     }
   }
 
-  // Примерная длительность одного дневного сна, когда факт не указан (зависит от числа снов):
-  // 4 сна — по 1 ч, 3 — по 1 ч 15 м, 2 — по 1 ч 30 м, 1 — 2 ч 30 м.
-  const NAP_DUR_DEF={1:150,2:90,3:75,4:60};
-  const DEF=NAP_DUR_DEF[N]||90;
-  const durs=naps.map(n=>(Number.isFinite(n.s)&&Number.isFinite(n.e)&&n.e>n.s)?(n.e-n.s):DEF);
+  // В расширенном режиме длительность незаполненного сна берётся из своей шкалы,
+  // иначе — типовая под число снов (4→1:00, 3→1:15, 2→1:30, 1→2:30).
+  ensureAdvArrays(N);
+  const planDur=i=>(advEnabled?advDurs[i]:(NAP_DUR_DEF[N]||90));
+  const durs=naps.map((n,i)=>(Number.isFinite(n.s)&&Number.isFinite(n.e)&&n.e>n.s)?(n.e-n.s):planDur(i));
   const napTotal=durs.reduce((a,b)=>a+b,0);
   ok();
 
-  // Рекомендации — оба ползунка перестраивают график по окнам бодрствования
-  // (всего N+1 окон: утро→сон1, между снами, последний сон→ночь). Связка взвешенная:
-  // первый сон в основном от «времени между снами», ночь — от «общего бодрствования»,
-  // при этом второй ползунок тоже влияет, но слабее (вес DOM/SEC).
-  const DOM=.75, SEC=.25;
-  const recFirst=mw+(DOM*fwM+SEC*whM/(N+1));               // первый сон: окно бодрствования
-  const recNight=mw+napTotal+(DOM*whM+SEC*(N+1)*fwM);      // ночь: дневной сон + бюджет бодрствования
-
-  // расписание рекомендованных снов: окно бодрствования между снами = план (fw)
-  const recNaps=[]; for(let i=0,t=recFirst;i<N;i++){recNaps.push({s:t,e:t+durs[i]});t=t+durs[i]+fwM;}
+  // Расписание рекомендованных снов и ночи.
+  let recFirst, recNight;
+  const recNaps=[];
+  if(advEnabled){
+    // Каждое окно бодрствования и каждый сон — из расширенной шкалы (N+1 окон, N снов).
+    recFirst=mw+advWakes[0];
+    let t=recFirst;
+    for(let i=0;i<N;i++){ recNaps.push({s:t,e:t+durs[i]}); t=recNaps[i].e+advWakes[i+1]; }
+    recNight=t;
+  }else{
+    // Текущая логика: взвешенная связка ползунков (всего N+1 окон бодрствования).
+    const DOM=.75, SEC=.25;
+    recFirst=mw+(DOM*fwM+SEC*whM/(N+1));               // первый сон: окно бодрствования
+    recNight=mw+napTotal+(DOM*whM+SEC*(N+1)*fwM);      // ночь: дневной сон + бюджет бодрствования
+    for(let i=0,t=recFirst;i<N;i++){recNaps.push({s:t,e:t+durs[i]});t=t+durs[i]+fwM;}
+  }
   if(recNight>=mw+1440 || recNaps[N-1].e>=recNight){
     err('Расчёт выходит за пределы суток (24 ч). Уменьшите окно бодрствования, длительность или число снов.');
     drawTimeline(null);return;
