@@ -26,6 +26,13 @@ data class Child(
     @Column(name = "birth_date")
     var birthDate: String? = null,
 
+    /**
+     * Настройки планировщика для этого ребёнка (JSON-строка: wh, fw, napCount, adv).
+     * Хранятся на сервере, чтобы переживать смену браузера/инкогнито.
+     */
+    @Column(name = "config", columnDefinition = "text")
+    var config: String? = null,
+
     @Column(name = "created_at")
     var createdAt: Instant = Instant.now()
 )

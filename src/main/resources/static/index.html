@@ -732,8 +732,16 @@ function syncAdvUI(){
   if(fw){ fw.disabled=advEnabled; const f=fw.closest('.slider-field'); if(f) f.classList.toggle('locked',advEnabled); }
 }
 
-/* Ключ хранения последней выбранной шкалы для пары аккаунт+ребёнок. */
+/* Ключ хранения последней выбранной шкалы для пары аккаунт+ребёнок (локальный кэш). */
 function cfgKey(){ return 'cfg:'+currentUser+':'+currentChildId; }
+/* Отложенная синхронизация настроек с сервером, чтобы не слать запрос на каждый сдвиг ползунка. */
+let cfgSaveTimer=null;
+function pushCfgToServer(childId,payload){
+  clearTimeout(cfgSaveTimer);
+  cfgSaveTimer=setTimeout(()=>{
+    api('PUT','/children/'+childId+'/config',{config:payload}).catch(()=>{});
+  },600);
+}
 /* Запомнить текущие значения параметров расчёта (включая расширенный режим). */
 function saveCfg(){
   if(!currentUser||!currentChildId) return;
@@ -743,7 +751,12 @@ function saveCfg(){
     napCount:parseInt(document.getElementById('napCount').value),
     adv:{enabled:advEnabled,wakes:advWakes.slice(),durs:advDurs.slice()}
   };
-  try{ localStorage.setItem(cfgKey(),JSON.stringify(cfg)); }catch(e){}
+  const payload=JSON.stringify(cfg);
+  try{ localStorage.setItem(cfgKey(),payload); }catch(e){}
+  // обновляем кэш в загруженном объекте ребёнка, чтобы повторный loadCfg не откатывал значения
+  const ch=children.find(c=>String(c.id)===String(currentChildId));
+  if(ch) ch.config=payload;
+  pushCfgToServer(currentChildId,payload);
 }
 /* Применить сохранённую шкалу к контролам (или дефолт на 1 сон) и пересчитать. */
 function applyCfg(saved){
@@ -761,11 +774,16 @@ function applyCfg(saved){
   buildNaps();
   calc();
 }
-/* Восстановить запомненную шкалу ребёнка. */
+/* Восстановить запомненную шкалу ребёнка: приоритет — серверная конфигурация,
+   затем локальный кэш (с переносом его на сервер при первом заходе). */
 function loadCfg(){
-  let saved=null;
-  try{ saved=JSON.parse(localStorage.getItem(cfgKey())||'null'); }catch(e){}
+  let saved=null, fromServer=false;
+  const ch=children.find(c=>String(c.id)===String(currentChildId));
+  if(ch&&ch.config){ try{ saved=JSON.parse(ch.config); fromServer=true; }catch(e){} }
+  if(!saved){ try{ saved=JSON.parse(localStorage.getItem(cfgKey())||'null'); }catch(e){} }
   applyCfg(saved);
+  // конфигурация была только локально — переносим её на сервер
+  if(!fromServer&&saved) saveCfg();
 }
 /* Смена количества снов → подставить дефолтные бодрствования и переразмерить массивы. */
 function onNapChange(){

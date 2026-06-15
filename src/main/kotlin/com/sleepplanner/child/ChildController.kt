@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*
 import java.time.Instant
 
 data class ChildRequest(val name: String?, val birthDate: String?)
+data class ConfigRequest(val config: String?)
 
 @RestController
 @RequestMapping("/api/children")
@@ -27,7 +28,8 @@ class ChildController(
     private fun toMap(c: Child): Map<String, Any?> = mapOf(
         "id" to c.id,
         "name" to c.name,
-        "birthDate" to c.birthDate
+        "birthDate" to c.birthDate,
+        "config" to c.config
     )
 
     /** Нормализует дату рождения: пустую строку → null, формат yyyy-MM-dd. */
@@ -83,6 +85,23 @@ class ChildController(
         child.birthDate = birth
         children.save(child)
         return ResponseEntity.ok(toMap(child))
+    }
+
+    /** Сохраняет настройки планировщика (JSON) для ребёнка. */
+    @PutMapping("/{id}/config")
+    fun saveConfig(
+        @PathVariable id: Long,
+        @RequestBody body: ConfigRequest,
+        request: HttpServletRequest
+    ): ResponseEntity<*> {
+        val uid = SessionUser.uid(request) ?: return unauthorized()
+        val child = children.findByIdAndUserId(id, uid)
+            ?: return err(HttpStatus.NOT_FOUND, "Ребёнок не найден")
+        val cfg = body.config
+        if (cfg != null && cfg.length > 4000) return err(HttpStatus.BAD_REQUEST, "Настройки слишком большие")
+        child.config = cfg
+        children.save(child)
+        return ResponseEntity.ok(mapOf("ok" to true))
     }
 
     /** Удаляет ребёнка вместе со всей его историей. */
