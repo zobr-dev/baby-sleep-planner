@@ -1085,15 +1085,12 @@ function drawTimeline(d){
 
 /* ---------- clear inputs to defaults ---------- */
 function clearFields(){
-  document.getElementById('wh').value=720;
-  document.getElementById('fw').value=360;
+  // Очищаем только поля ввода (утренний подъём, время снов, уход в ночь).
+  // Параметры расчёта (бодрствование/окно, число снов, расширенный режим) сохраняем.
   document.getElementById('mw').value='07:00';
-  document.getElementById('napCount').value='1';
   document.getElementById('an').value='';
-  buildNaps();
   document.querySelectorAll('#napRows input').forEach(inp=>inp.value='');
   calc();
-  saveCfg();                 // сброс к 1 сну тоже запоминаем
   toast(t('msg_fields_cleared'));
 }
 
