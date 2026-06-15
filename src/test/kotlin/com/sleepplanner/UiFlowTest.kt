@@ -123,6 +123,7 @@ class UiFlowTest : FeatureSpec() {
         feature("Живой расчёт") {
             scenario("стрелка на ползунке меняет подпись общего бодрствования") {
                 AuthPage().open().registerAndEnter("mama")
+                    .expandParams()
                     .wakeLabelShouldBe("12 ч")
                     .nudgeWakeSliderRight()
                     .wakeLabelShouldBe("12 ч 5 м")
@@ -130,8 +131,26 @@ class UiFlowTest : FeatureSpec() {
 
             scenario("смена количества снов перестраивает строки") {
                 AuthPage().open().registerAndEnter("mama")
+                    .expandParams()
                     .selectNaps(2)
                     .napRowShouldBeVisible(1)
+            }
+        }
+
+        feature("Расширенные настройки") {
+            scenario("включение блокирует ползунок бодрствования между снами") {
+                AuthPage().open().registerAndEnter("mama")
+                    .expandParams()
+                    .betweenWakeSliderShouldBeEnabled()
+                    .enableAdvanced()
+                    .betweenWakeSliderShouldBeDisabled()
+            }
+
+            scenario("кнопка открывает отдельную страницу расширенных настроек") {
+                AuthPage().open().registerAndEnter("mama")
+                    .expandParams()
+                    .openAdvanced()
+                    .advancedPageShouldBeVisible()
             }
         }
 
@@ -156,6 +175,7 @@ class UiFlowTest : FeatureSpec() {
         feature("Очистка полей") {
             scenario("кнопка очистки возвращает дефолты и показывает toast") {
                 AuthPage().open().registerAndEnter("mama")
+                    .expandParams()
                     .nudgeWakeSliderRight()
                     .wakeLabelShouldBe("12 ч 5 м")
                     .clearFields()

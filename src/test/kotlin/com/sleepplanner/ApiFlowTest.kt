@@ -656,6 +656,67 @@ class ApiFlowTest : FeatureSpec() {
                         .contentType(MediaType.APPLICATION_JSON).content(saveBody("2026-06-02", childId = b))
                 ).andExpect(status().isOk).andExpect(jsonPath("$.updated").value(false))
             }
+
+            scenario("настройки планировщика сохраняются на сервере и переживают новую сессию") {
+                val s = register("mama")
+                val cid = addChild(s, "Арсений")
+                val cfg = """{"wh":660,"fw":210,"napCount":2,"adv":{"enabled":true,"wakes":[120,180,240],"durs":[90,80]}}"""
+                // тело запроса: config — строка с экранированным JSON-содержимым
+                val body = "{\"config\":\"" + cfg.replace("\"", "\\\"") + "\"}"
+
+                mvc.perform(
+                    put("/api/children/$cid/config").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                ).andExpect(status().isOk)
+                    .andExpect(jsonPath("$.ok").value(true))
+
+                // новая сессия (как другой браузер/инкогнито) видит сохранённую конфигурацию
+                val other = MockHttpSession()
+                mvc.perform(
+                    post("/api/login").session(other)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"username":"mama","password":"1234"}""")
+                ).andExpect(status().isOk)
+
+                mvc.perform(get("/api/children").session(other))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$[0].config").value(cfg))
+            }
+
+            scenario("нельзя сохранять настройки чужому ребёнку → 404") {
+                val mama = register("mama")
+                val papa = register("papa")
+                val papaChild = addChild(papa, "Чужой")
+
+                mvc.perform(
+                    put("/api/children/$papaChild/config").session(mama)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"config":"{}"}""")
+                ).andExpect(status().isNotFound)
+                    .andExpect(jsonPath("$.error").value("Ребёнок не найден"))
+            }
+
+            scenario("слишком большие настройки → 400") {
+                val s = register("mama")
+                val cid = addChild(s, "Арсений")
+                val huge = "x".repeat(4001)
+
+                mvc.perform(
+                    put("/api/children/$cid/config").session(s)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"config":"$huge"}""")
+                ).andExpect(status().isBadRequest)
+                    .andExpect(jsonPath("$.error").value("Настройки слишком большие"))
+            }
+
+            scenario("сохранение настроек без сессии → 401") {
+                mvc.perform(
+                    put("/api/children/1/config")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""{"config":"{}"}""")
+                ).andExpect(status().isUnauthorized)
+            }
         }
 
         feature("История требует авторизации") {

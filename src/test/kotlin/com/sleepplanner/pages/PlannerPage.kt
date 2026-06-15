@@ -1,6 +1,7 @@
 package com.sleepplanner.pages
 
 import com.codeborne.selenide.CollectionCondition.size
+import com.codeborne.selenide.Condition.disabled
 import com.codeborne.selenide.Condition.exactText
 import com.codeborne.selenide.Condition.text
 import com.codeborne.selenide.Condition.value
@@ -16,8 +17,14 @@ class PlannerPage {
     private val whoBox = element("#whoBox")
     private val whoName = element("#whoName")
     private val childSelect = element("#childSelect")
+    private val cfgToggle = element("#cfgToggle")
+    private val cfgParams = element("#cfgParams")
     private val wakeSlider = element("#wh")
     private val wakeLabel = element("#whVal")
+    private val betweenSlider = element("#fw")
+    private val advSwitch = element(".adv-row .switch")
+    private val advOpenBtn = element(".adv-open-btn")
+    private val advStage = element("#advStage")
     private val napCount = element("#napCount")
     private val errBanner = element("#errBanner")
     private val errText = element("#errText")
@@ -50,6 +57,13 @@ class PlannerPage {
         return this
     }
 
+    /** Раскрывает свёрнутый по умолчанию блок «Параметры расчёта» (ползунки, число снов). */
+    fun expandParams(): PlannerPage {
+        if (!cfgParams.isDisplayed) cfgToggle.click()
+        cfgParams.shouldBe(visible)
+        return this
+    }
+
     // --- живой расчёт ---
     // Ползунки минутные (step=5): значение 720 = «12 ч», один шаг вправо = «12 ч 5 м».
 
@@ -76,6 +90,39 @@ class PlannerPage {
     fun napRowShouldBeVisible(i: Int): PlannerPage {
         element("#ns$i").shouldBe(visible)
         element("#ne$i").shouldBe(visible)
+        return this
+    }
+
+    // --- расширенные настройки ---
+
+    /** Включает расширенный режим переключателем рядом с ползунком (клик по label-свитчу). */
+    fun enableAdvanced(): PlannerPage {
+        advSwitch.click()
+        return this
+    }
+
+    /** В расширенном режиме ползунок бодрствования между снами блокируется. */
+    fun betweenWakeSliderShouldBeDisabled(): PlannerPage {
+        betweenSlider.shouldBe(disabled)
+        return this
+    }
+
+    fun betweenWakeSliderShouldBeEnabled(): PlannerPage {
+        betweenSlider.shouldNotBe(disabled)
+        return this
+    }
+
+    /** Открывает отдельную страницу расширенных настроек по кнопке «Настроить →». */
+    fun openAdvanced(): PlannerPage {
+        advOpenBtn.click()
+        return this
+    }
+
+    /** Страница расширенных настроек видна и содержит ползунки бодрствований/снов. */
+    fun advancedPageShouldBeVisible(): PlannerPage {
+        advStage.shouldBe(visible)
+        element("#aw0").shouldBe(visible) // бодрствование до 1-го сна
+        element("#ad0").shouldBe(visible) // длительность 1-го сна
         return this
     }
 
