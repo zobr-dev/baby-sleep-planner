@@ -103,6 +103,15 @@ class UiFlowTest : FeatureSpec() {
                     .logout()
                     .shouldBeVisible()
             }
+
+            scenario("вход по нажатию Enter в поле пароля") {
+                val auth = AuthPage().open()
+                    .registerAndEnter("mama")
+                    .logout()
+                auth.shouldBeVisible()
+                auth.loginByEnter("mama")
+                    .headerShouldBeVisible()
+            }
         }
 
         feature("Первый ребёнок") {

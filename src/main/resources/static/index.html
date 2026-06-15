@@ -1234,6 +1234,12 @@ async function delRec(date){
 }
 function fmtDate(d){const[y,m,day]=d.split('-');return `${day}/${m}/${y}`;}
 
+/* Enter в любом поле формы авторизации запускает текущее действие
+   (вход / регистрация / запрос кода / сброс пароля). */
+document.getElementById('authStage').addEventListener('keydown',function(e){
+  if(e.key==='Enter' && e.target.tagName==='INPUT'){ e.preventDefault(); submitAuth(); }
+});
+
 /* Подставить переводы в варианты количества снов («1 дневной сон» …). */
 function relabelNapOptions(){
   document.querySelectorAll('#napCount option').forEach(function(o){

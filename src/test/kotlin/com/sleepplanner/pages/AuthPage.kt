@@ -4,6 +4,7 @@ import com.codeborne.selenide.Condition.text
 import com.codeborne.selenide.Condition.visible
 import com.codeborne.selenide.Selenide.element
 import com.codeborne.selenide.Selenide.open
+import org.openqa.selenium.Keys
 
 /** Экран авторизации: вход, регистрация и сброс пароля по e-mail. */
 class AuthPage {
@@ -83,4 +84,12 @@ class AuthPage {
     /** Полный happy-path: регистрация + добавление ребёнка → основное приложение. */
     fun registerAndEnter(login: String, child: String = "Малыш"): PlannerPage =
         register(login).addChild(child).shouldBeLoaded(login)
+
+    /** Вход существующего пользователя нажатием Enter в поле пароля (без клика по кнопке). */
+    fun loginByEnter(login: String, password: String = "1234"): PlannerPage {
+        user.setValue(login)
+        pass.setValue(password)
+        pass.sendKeys(Keys.ENTER)
+        return PlannerPage()
+    }
 }
