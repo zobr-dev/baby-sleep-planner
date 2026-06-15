@@ -15,7 +15,7 @@
 <div class="wrap">
   <!-- ===== TOP BAR ===== -->
   <div class="topbar">
-    <div class="brand" onclick="goHome()" style="cursor:pointer" title="На главную">
+    <div class="brand" onclick="goHome()" style="cursor:pointer" title="На главную" data-i18n-title="brand_home_tip">
       <svg class="logo" viewBox="0 0 100 100" fill="none">
         <defs><radialGradient id="mg" cx="35%" cy="30%"><stop offset="0%" stop-color="#fff7e8"/><stop offset="100%" stop-color="#ffd98e"/></radialGradient></defs>
         <circle cx="50" cy="50" r="46" fill="rgba(185,167,240,.12)" stroke="rgba(185,167,240,.35)"/>
@@ -23,31 +23,33 @@
         <circle cx="34" cy="30" r="2" fill="#fff" opacity=".9"/><circle cx="26" cy="44" r="1.5" fill="#fff" opacity=".7"/><circle cx="40" cy="22" r="1.3" fill="#fff" opacity=".8"/>
       </svg>
       <div>
-        <h1>Планировщик детского сна</h1>
+        <h1 data-i18n="brand_title">Планировщик детского сна</h1>
       </div>
     </div>
     <div class="who" id="whoBox" style="display:none">
-      <span>Привет, <b id="whoName"></b></span>
+      <span><span data-i18n="greeting">Привет, </span><b id="whoName"></b></span>
       <select id="childSelect" class="child-select" onchange="switchChild(this.value)" style="display:none"></select>
-      <button class="btn btn-ghost" onclick="openAccount()">Аккаунт</button>
-      <button class="btn btn-ghost" onclick="logout()">Выйти</button>
+      <select class="lang-select" onchange="setLang(this.value)" aria-label="Язык"></select>
+      <button class="btn btn-ghost" onclick="openAccount()" data-i18n="btn_account">Аккаунт</button>
+      <button class="btn btn-ghost" onclick="logout()" data-i18n="btn_logout">Выйти</button>
     </div>
   </div>
 
   <!-- ===== AUTH ===== -->
   <div class="auth-stage" id="authStage">
     <div class="auth-intro fade">
-      <span class="eyebrow">✨ Режим дня без догадок</span>
-      <h2>Высыпается малыш — отдыхают родители</h2>
-      <p>Планировщик подсказывает, когда укладывать ребёнка на каждый дневной сон и в ночь, опираясь на комфортные окна бодрствования. Укажите утренний подъём — остальное рассчитаем за вас.</p>
+      <span class="eyebrow" data-i18n="auth_eyebrow">✨ Режим дня без догадок</span>
+      <h2 data-i18n="auth_h2">Высыпается малыш — отдыхают родители</h2>
+      <p data-i18n="auth_intro">Планировщик подсказывает, когда укладывать ребёнка на каждый дневной сон и в ночь, опираясь на комфортные окна бодрствования. Укажите утренний подъём — остальное рассчитаем за вас.</p>
       <ul class="auth-feats">
-        <li class="auth-feat"><span class="ic">🌙</span><div><b>Время засыпания</b><span>Рекомендации на каждый дневной сон и на ночь по вашему графику</span></div></li>
-        <li class="auth-feat"><span class="ic">🕐</span><div><b>Распорядок суток</b><span>Наглядная 24-часовая шкала сна и бодрствования</span></div></li>
-        <li class="auth-feat"><span class="ic">📖</span><div><b>История и средние</b><span>Сохраняйте дни и следите за средним дневным, ночным сном и бодрствованием</span></div></li>
-        <li class="auth-feat"><span class="ic">👶</span><div><b>Несколько детей</b><span>Отдельный профиль и история для каждого ребёнка</span></div></li>
+        <li class="auth-feat"><span class="ic">🌙</span><div><b data-i18n="feat_bedtime_t">Время засыпания</b><span data-i18n="feat_bedtime_s">Рекомендации на каждый дневной сон и на ночь по вашему графику</span></div></li>
+        <li class="auth-feat"><span class="ic">🕐</span><div><b data-i18n="feat_routine_t">Распорядок суток</b><span data-i18n="feat_routine_s">Наглядная 24-часовая шкала сна и бодрствования</span></div></li>
+        <li class="auth-feat"><span class="ic">📖</span><div><b data-i18n="feat_history_t">История и средние</b><span data-i18n="feat_history_s">Сохраняйте дни и следите за средним дневным, ночным сном и бодрствованием</span></div></li>
+        <li class="auth-feat"><span class="ic">👶</span><div><b data-i18n="feat_kids_t">Несколько детей</b><span data-i18n="feat_kids_s">Отдельный профиль и история для каждого ребёнка</span></div></li>
       </ul>
     </div>
     <div class="auth-card fade">
+      <div class="lang-row"><select class="lang-select" onchange="setLang(this.value)" aria-label="Язык"></select></div>
       <svg class="auth-moon" viewBox="0 0 100 100" fill="none">
         <defs><radialGradient id="amg" cx="35%" cy="30%"><stop offset="0%" stop-color="#fff7e8"/><stop offset="100%" stop-color="#ffd98e"/></radialGradient></defs>
         <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(185,167,240,.25)" stroke-dasharray="2 6"/>
@@ -58,23 +60,23 @@
       <p class="sub" id="authSub">Войдите, чтобы рассчитать режим и сохранять историю по дням</p>
 
       <div class="field" id="userField">
-        <label>Логин</label>
-        <input id="loginUser" type="text" placeholder="например, mama_arseniya" autocomplete="username">
+        <label data-i18n="field_login">Логин</label>
+        <input id="loginUser" type="text" placeholder="например, mama_arseniya" data-i18n-ph="ph_login" autocomplete="username">
       </div>
       <div class="field" id="emailField" style="display:none">
-        <label>E-mail</label>
-        <input id="loginEmail" type="email" placeholder="you@example.com" autocomplete="email">
+        <label data-i18n="field_email">E-mail</label>
+        <input id="loginEmail" type="email" placeholder="you@example.com" data-i18n-ph="ph_email" autocomplete="email">
       </div>
       <div class="field" id="codeField" style="display:none">
-        <label>Код из письма</label>
-        <input id="loginCode" type="text" inputmode="numeric" maxlength="6" placeholder="6 цифр" autocomplete="one-time-code">
+        <label data-i18n="field_code">Код из письма</label>
+        <input id="loginCode" type="text" inputmode="numeric" maxlength="6" placeholder="6 цифр" data-i18n-ph="ph_code" autocomplete="one-time-code">
       </div>
       <div class="field" id="passField">
-        <label id="passLabel">Пароль</label>
+        <label id="passLabel" data-i18n="field_password">Пароль</label>
         <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
       <div class="field" id="confirmField" style="display:none">
-        <label>Повторите пароль</label>
+        <label data-i18n="field_pass_repeat">Повторите пароль</label>
         <input id="loginPass2" type="password" placeholder="••••••••" autocomplete="new-password">
       </div>
 
@@ -85,26 +87,26 @@
         Ещё нет аккаунта? <a onclick="setMode('register')">Зарегистрироваться</a>
       </div>
       <div class="switcher" id="forgotLink">
-        <a onclick="setMode('forgot')">Забыли пароль?</a>
+        <a onclick="setMode('forgot')" data-i18n="forgot_link">Забыли пароль?</a>
       </div>
-      <p class="note">Учётные записи и история хранятся на сервере. Пароли не хранятся в открытом виде — только криптографический хеш.</p>
+      <p class="note" data-i18n="auth_note">Учётные записи и история хранятся на сервере. Пароли не хранятся в открытом виде — только криптографический хеш.</p>
     </div>
   </div>
 
   <!-- ===== CHILD GATE (первый ребёнок) ===== -->
   <div class="auth-stage" id="childGate" style="display:none">
     <div class="auth-card fade" style="max-width:460px">
-      <h2>Добавьте ребёнка</h2>
-      <p class="sub">Расчёты и история ведутся по каждому ребёнку отдельно. Если у вас уже есть сохранённая история — она привяжется к этому ребёнку.</p>
+      <h2 data-i18n="gate_title">Добавьте ребёнка</h2>
+      <p class="sub" data-i18n="gate_sub">Расчёты и история ведутся по каждому ребёнку отдельно. Если у вас уже есть сохранённая история — она привяжется к этому ребёнку.</p>
       <div class="field">
-        <label>Имя</label>
-        <input id="gateChildName" type="text" placeholder="например, Арсений" maxlength="40">
+        <label data-i18n="field_name">Имя</label>
+        <input id="gateChildName" type="text" placeholder="например, Арсений" data-i18n-ph="ph_child_name" maxlength="40">
       </div>
       <div class="field">
-        <label>Дата рождения <span class="opt">— необязательно</span></label>
-        <input id="gateChildBirth" type="text" inputmode="numeric" placeholder="дд/мм/гггг" maxlength="10" oninput="maskDate(this)">
+        <label><span data-i18n="field_birth">Дата рождения</span> <span class="opt" data-i18n="opt_suffix">— необязательно</span></label>
+        <input id="gateChildBirth" type="text" inputmode="numeric" placeholder="дд/мм/гггг" data-i18n-ph="ph_date" maxlength="10" oninput="maskDate(this)">
       </div>
-      <button class="btn btn-primary" onclick="submitFirstChild()">Добавить</button>
+      <button class="btn btn-primary" onclick="submitFirstChild()" data-i18n="btn_add">Добавить</button>
       <div class="msg" id="childGateMsg"></div>
     </div>
   </div>
@@ -114,21 +116,21 @@
     <div class="grid">
       <!-- INPUTS -->
       <div class="panel fade">
-        <h3>🌤️ Параметры дня</h3>
-        <p class="ph-sub">Меняйте значения — расчёт обновляется сразу</p>
+        <h3 data-i18n="params_title">🌤️ Параметры дня</h3>
+        <p class="ph-sub" data-i18n="params_sub">Меняйте значения — расчёт обновляется сразу</p>
 
         <!-- Параметры расчёта скрыты по умолчанию, раскрываются по кнопке. -->
         <button type="button" class="cfg-toggle" id="cfgToggle" onclick="toggleParams()" aria-expanded="false" aria-controls="cfgParams">
-          <span>⚙️ Параметры расчёта</span>
+          <span data-i18n="params_toggle">⚙️ Параметры расчёта</span>
           <span class="cfg-caret">▾</span>
         </button>
         <div class="cfg-collapse" id="cfgParams" hidden>
           <div class="slider-field">
-            <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое общее бодрствование за день</label><span class="val" id="whVal">12 ч</span></div>
+            <div class="slider-top"><label style="color:var(--muted);font-size:12.5px" data-i18n="slider_total">Планируемое общее бодрствование за день</label><span class="val" id="whVal">12 ч</span></div>
             <input type="range" id="wh" min="480" max="960" step="5" value="720" oninput="onSlide()">
           </div>
           <div class="slider-field">
-            <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 ч</span></div>
+            <div class="slider-top"><label style="color:var(--muted);font-size:12.5px" data-i18n="slider_between">Планируемое время бодрствования между снами</label><span class="val" id="fwVal">6 ч</span></div>
             <input type="range" id="fw" min="60" max="480" step="5" value="360" oninput="onSlide()">
           </div>
           <!-- Расширенный режим: своя шкала для каждого бодрствования и каждого сна. -->
@@ -137,11 +139,11 @@
               <input type="checkbox" id="advToggle" onchange="onAdvToggle(this)">
               <span class="switch-track"><span class="switch-knob"></span></span>
             </label>
-            <span class="adv-row-label">Расширенные настройки</span>
-            <button type="button" class="btn btn-ghost adv-open-btn" onclick="openAdv()">Настроить →</button>
+            <span class="adv-row-label" data-i18n="adv_row_label">Расширенные настройки</span>
+            <button type="button" class="btn btn-ghost adv-open-btn" onclick="openAdv()" data-i18n="adv_open_btn">Настроить →</button>
           </div>
           <div class="field" style="margin-bottom:0">
-            <label>Количество дневных снов</label>
+            <label data-i18n="field_nap_count">Количество дневных снов</label>
             <select id="napCount" onchange="onNapChange()">
               <option value="1">1 дневной сон</option>
               <option value="2">2 дневных сна</option>
@@ -152,31 +154,31 @@
         </div>
 
         <div class="field">
-          <label>Фактическое время утреннего подъема <span class="req">— обязательно</span></label>
+          <label><span data-i18n="field_morning">Фактическое время утреннего подъема</span> <span class="req" data-i18n="req_suffix">— обязательно</span></label>
           <input type="time" id="mw" value="07:00" lang="ru-RU" oninput="calc()">
         </div>
 
         <div id="napRows"></div>
-        <div class="field-hint" style="margin-top:-4px;margin-bottom:14px">Время снов можно не заполнять — покажем рекомендации по подъёму и ползункам. Заполните, чтобы сравнить с фактом и сохранить в историю.</div>
+        <div class="field-hint" style="margin-top:-4px;margin-bottom:14px" data-i18n="naps_hint">Время снов можно не заполнять — покажем рекомендации по подъёму и ползункам. Заполните, чтобы сравнить с фактом и сохранить в историю.</div>
 
         <div class="field">
-          <label>Фактический уход в ночь <span class="opt">— необязательно</span></label>
+          <label><span data-i18n="field_actual_night">Фактический уход в ночь</span> <span class="opt" data-i18n="opt_suffix">— необязательно</span></label>
           <input type="time" id="an" value="" lang="ru-RU" oninput="calc()">
-          <div class="field-hint">Заполните, чтобы увидеть фактическое общее бодрствование</div>
+          <div class="field-hint" data-i18n="actual_night_hint">Заполните, чтобы увидеть фактическое общее бодрствование</div>
         </div>
 
         <div class="actions">
           <div class="field">
-            <label style="margin-bottom:7px">Дата расчёта</label>
-            <input type="text" id="histDate" inputmode="numeric" placeholder="дд/мм/гггг" maxlength="10" oninput="maskDate(this)">
+            <label style="margin-bottom:7px" data-i18n="field_calc_date">Дата расчёта</label>
+            <input type="text" id="histDate" inputmode="numeric" placeholder="дд/мм/гггг" data-i18n-ph="ph_date" maxlength="10" oninput="maskDate(this)">
           </div>
-          <button class="icon-btn" style="align-self:flex-end" data-tip="Сохранить в историю" aria-label="Сохранить в историю" onclick="saveCalc()">
+          <button class="icon-btn" style="align-self:flex-end" data-tip="Сохранить в историю" data-i18n-tip="tip_save" aria-label="Сохранить в историю" onclick="saveCalc()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
           </button>
-          <button class="icon-btn" style="align-self:flex-end" data-tip="Загрузить последние данные" aria-label="Загрузить последние данные" onclick="loadLast()">
+          <button class="icon-btn" style="align-self:flex-end" data-tip="Загрузить последние данные" data-i18n-tip="tip_load_last" aria-label="Загрузить последние данные" onclick="loadLast()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
           </button>
-          <button class="icon-btn" style="align-self:flex-end" data-tip="Очистить поля" aria-label="Очистить поля" onclick="clearFields()">
+          <button class="icon-btn" style="align-self:flex-end" data-tip="Очистить поля" data-i18n-tip="tip_clear" aria-label="Очистить поля" onclick="clearFields()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>
           </button>
         </div>
@@ -184,8 +186,8 @@
 
       <!-- RESULTS -->
       <div class="panel fade">
-        <h3>🌙 Рекомендуемое время засыпания</h3>
-        <p class="ph-sub">Рассчитано из суток в 24 часа по окнам бодрствования</p>
+        <h3 data-i18n="results_title">🌙 Рекомендуемое время засыпания</h3>
+        <p class="ph-sub" data-i18n="results_sub">Рассчитано из суток в 24 часа по окнам бодрствования</p>
 
         <div class="err-banner" id="errBanner"><span id="errText"></span></div>
 
@@ -193,22 +195,22 @@
           <div id="napCards"></div>
           <div class="rcard night">
             <svg class="ricon" viewBox="0 0 48 48" fill="none"><path d="M30 12a15 15 0 1 0 7 23 12 12 0 1 1-7-23Z" fill="#d8ccff"/></svg>
-            <div class="rlabel">🌙 Рекомендуемое засыпание в ночь</div>
+            <div class="rlabel" data-i18n="rec_night_label">🌙 Рекомендуемое засыпание в ночь</div>
             <div class="rtime" id="nightTime">21:00</div>
             <div class="rmeta" id="nightMeta"></div>
           </div>
           <div class="rcard actual empty" id="actCard">
             <svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="14" fill="none" stroke="#ffd98e" stroke-width="2.5" opacity=".7"/><path d="M24 16v8l5 3" stroke="#ffd98e" stroke-width="2.5" stroke-linecap="round"/></svg>
-            <div class="rlabel">⏱️ Фактическое общее бодрствование</div>
+            <div class="rlabel" data-i18n="actual_wake_label">⏱️ Фактическое общее бодрствование</div>
             <div class="rtime" id="actWake">—</div>
-            <div class="rmeta" id="actMeta">Укажите фактический уход в ночь</div>
+            <div class="rmeta" id="actMeta" data-i18n="specify_night">Укажите фактический уход в ночь</div>
           </div>
 
           <div class="stats">
-            <div class="stat"><div class="sv" id="stMor">6 ч</div><div class="sl">до первого сна</div></div>
-            <div class="stat"><div class="sv" id="stNap">2 ч</div><div class="sl">всего дневного сна</div></div>
-            <div class="stat"><div class="sv" id="stEve">6 ч</div><div class="sl">после сна до ночи</div></div>
-            <div class="stat"><div class="sv" id="stNight">—</div><div class="sl">ночной сон</div></div>
+            <div class="stat"><div class="sv" id="stMor">6 ч</div><div class="sl" data-i18n="stat_until_first">до первого сна</div></div>
+            <div class="stat"><div class="sv" id="stNap">2 ч</div><div class="sl" data-i18n="stat_total_day">всего дневного сна</div></div>
+            <div class="stat"><div class="sv" id="stEve">6 ч</div><div class="sl" data-i18n="stat_after_nap">после сна до ночи</div></div>
+            <div class="stat"><div class="sv" id="stNight">—</div><div class="sl" data-i18n="stat_night">ночной сон</div></div>
           </div>
         </div>
       </div>
@@ -216,13 +218,13 @@
 
     <!-- TIMELINE -->
     <div class="panel timeline-panel fade">
-      <h3>🕐 Распорядок суток</h3>
-      <p class="ph-sub">Полный 24-часовой цикл: бодрствование, дневной и ночной сон</p>
+      <h3 data-i18n="timeline_title">🕐 Распорядок суток</h3>
+      <p class="ph-sub" data-i18n="timeline_sub">Полный 24-часовой цикл: бодрствование, дневной и ночной сон</p>
       <div id="timeline"></div>
       <div class="legend">
-        <span class="leg"><i style="background:linear-gradient(90deg,#ffd98e,#ffc9a3)"></i> Бодрствование</span>
-        <span class="leg"><i style="background:#8fe3c6"></i> Дневной сон</span>
-        <span class="leg"><i style="background:linear-gradient(90deg,#b9a7f0,#f4a6c4)"></i> Ночной сон</span>
+        <span class="leg"><i style="background:linear-gradient(90deg,#ffd98e,#ffc9a3)"></i> <span data-i18n="legend_wake">Бодрствование</span></span>
+        <span class="leg"><i style="background:#8fe3c6"></i> <span data-i18n="legend_day">Дневной сон</span></span>
+        <span class="leg"><i style="background:linear-gradient(90deg,#b9a7f0,#f4a6c4)"></i> <span data-i18n="legend_night">Ночной сон</span></span>
       </div>
     </div>
 
@@ -230,13 +232,13 @@
     <div class="panel hist-panel fade">
       <div class="hist-head">
         <div>
-          <h3>📖 История расчётов</h3>
-          <p class="ph-sub" style="margin:0">Сохранённые режимы по дням · максимум 90 дней</p>
+          <h3 data-i18n="history_title">📖 История расчётов</h3>
+          <p class="ph-sub" style="margin:0" data-i18n="history_sub">Сохранённые режимы по дням · максимум 90 дней</p>
         </div>
       </div>
       <div class="hist-tabs" id="histTabs">
-        <button class="htab active" data-days="7" onclick="setHistPeriod(7)">7 дней</button>
-        <button class="htab" data-days="30" onclick="setHistPeriod(30)">30 дней</button>
+        <button class="htab active" data-days="7" onclick="setHistPeriod(7)" data-i18n="seg_7">7 дней</button>
+        <button class="htab" data-days="30" onclick="setHistPeriod(30)" data-i18n="seg_30">30 дней</button>
       </div>
       <div class="hist-metrics" id="histMetrics"></div>
       <p class="hist-cap" id="histCap"></p>
@@ -248,93 +250,94 @@
   <!-- ===== ADVANCED PLANNER SETTINGS ===== -->
   <div class="auth-stage" id="advStage" style="display:none">
     <div class="auth-card fade" style="max-width:560px">
-      <h2>Расширенные настройки</h2>
-      <p class="sub">Задайте планируемое время каждого бодрствования и длительность каждого сна. Пока расширенный режим включён, эти значения используются во всех расчётах вместо общего «времени бодрствования между снами».</p>
+      <h2 data-i18n="adv_title">Расширенные настройки</h2>
+      <p class="sub" data-i18n="adv_sub">Задайте планируемое время каждого бодрствования и длительность каждого сна. Пока расширенный режим включён, эти значения используются во всех расчётах вместо общего «времени бодрствования между снами».</p>
 
       <div class="adv-enable">
         <label class="switch">
           <input type="checkbox" id="advToggle2" onchange="onAdvToggle(this)">
           <span class="switch-track"><span class="switch-knob"></span></span>
         </label>
-        <span class="adv-row-label">Расширенный режим</span>
+        <span class="adv-row-label" data-i18n="adv_mode_label">Расширенный режим</span>
         <span class="adv-state" id="advState">выключен</span>
       </div>
 
       <div class="adv-section">
-        <h4 class="adv-h">🌤️ Бодрствование</h4>
+        <h4 class="adv-h" data-i18n="adv_wake_h">🌤️ Бодрствование</h4>
         <div id="advWakeFields"></div>
       </div>
       <div class="adv-section">
-        <h4 class="adv-h">😴 Дневные сны</h4>
+        <h4 class="adv-h" data-i18n="adv_nap_h">😴 Дневные сны</h4>
         <div id="advNapFields"></div>
       </div>
 
-      <button class="btn btn-primary" onclick="saveAdv()">Сохранить</button>
+      <button class="btn btn-primary" onclick="saveAdv()" data-i18n="adv_save">Сохранить</button>
       <div class="msg" id="advMsg"></div>
-      <div class="switcher"><a onclick="closeAdv()">← Назад к расчёту</a></div>
+      <div class="switcher"><a onclick="closeAdv()" data-i18n="adv_back">← Назад к расчёту</a></div>
     </div>
   </div>
 
   <!-- ===== ACCOUNT ===== -->
   <div class="auth-stage" id="accountStage" style="display:none">
     <div class="auth-card fade" style="max-width:480px">
-      <h2>Аккаунт</h2>
-      <p class="sub">Ваши данные и настройки входа</p>
+      <h2 data-i18n="account_title">Аккаунт</h2>
+      <p class="sub" data-i18n="account_sub">Ваши данные и настройки входа</p>
 
-      <div class="acc-row"><span class="k">Логин</span><span class="v" id="accUser">—</span></div>
-      <div class="acc-row"><span class="k">E-mail</span><span class="v" id="accEmailView">—</span></div>
-      <div class="acc-row"><span class="k">Дата регистрации</span><span class="v" id="accCreated">—</span></div>
+      <div class="acc-row"><span class="k" data-i18n="acc_login">Логин</span><span class="v" id="accUser">—</span></div>
+      <div class="acc-row"><span class="k" data-i18n="acc_email">E-mail</span><span class="v" id="accEmailView">—</span></div>
+      <div class="acc-row"><span class="k" data-i18n="acc_created">Дата регистрации</span><span class="v" id="accCreated">—</span></div>
 
       <div class="acc-sec">
-        <h3>Дети</h3>
+        <h3 data-i18n="acc_children">Дети</h3>
         <div id="accChildren"></div>
         <div class="field" style="margin-top:14px">
-          <label>Имя</label>
-          <input id="newChildName" type="text" placeholder="Имя ребёнка" maxlength="40">
+          <label><span data-i18n="field_name">Имя</span> <span class="opt" data-i18n="opt_suffix">— необязательно</span></label>
+          <input id="newChildName" type="text" placeholder="Имя ребёнка" data-i18n-ph="ph_child_name_acc" maxlength="40">
         </div>
         <div class="field">
-          <label>Дата рождения <span class="opt">— необязательно</span></label>
-          <input id="newChildBirth" type="text" inputmode="numeric" placeholder="дд/мм/гггг" maxlength="10" oninput="maskDate(this)">
+          <label><span data-i18n="field_birth">Дата рождения</span> <span class="opt" data-i18n="opt_suffix">— необязательно</span></label>
+          <input id="newChildBirth" type="text" inputmode="numeric" placeholder="дд/мм/гггг" data-i18n-ph="ph_date" maxlength="10" oninput="maskDate(this)">
         </div>
-        <button class="btn btn-primary" onclick="addChild()">Добавить ребёнка</button>
+        <button class="btn btn-primary" onclick="addChild()" data-i18n="acc_add_child">Добавить ребёнка</button>
         <div class="msg" id="accChildMsg"></div>
       </div>
 
       <div class="acc-sec">
-        <h3>E-mail</h3>
+        <h3 data-i18n="acc_email">E-mail</h3>
         <div class="field">
-          <label>Адрес для восстановления пароля</label>
-          <input id="accEmail" type="email" placeholder="you@example.com" autocomplete="email">
+          <label data-i18n="acc_email_recovery_label">Адрес для восстановления пароля</label>
+          <input id="accEmail" type="email" placeholder="you@example.com" data-i18n-ph="ph_email" autocomplete="email">
         </div>
-        <button class="btn btn-primary" onclick="saveEmail()">Сохранить e-mail</button>
+        <button class="btn btn-primary" onclick="saveEmail()" data-i18n="acc_save_email">Сохранить e-mail</button>
         <div class="msg" id="accEmailMsg"></div>
       </div>
 
       <div class="acc-sec">
-        <h3>Изменить пароль</h3>
+        <h3 data-i18n="acc_change_pass">Изменить пароль</h3>
         <div class="field">
-          <label>Текущий пароль</label>
+          <label data-i18n="acc_cur_pass">Текущий пароль</label>
           <input id="accCurPass" type="password" placeholder="••••••••" autocomplete="current-password">
         </div>
         <div class="field">
-          <label>Новый пароль</label>
+          <label data-i18n="field_new_password">Новый пароль</label>
           <input id="accNewPass" type="password" placeholder="••••••••" autocomplete="new-password">
         </div>
         <div class="field">
-          <label>Повторите новый пароль</label>
+          <label data-i18n="acc_new_pass2">Повторите новый пароль</label>
           <input id="accNewPass2" type="password" placeholder="••••••••" autocomplete="new-password">
         </div>
-        <button class="btn btn-primary" onclick="changePassword()">Изменить пароль</button>
+        <button class="btn btn-primary" onclick="changePassword()" data-i18n="acc_change_pass">Изменить пароль</button>
         <div class="msg" id="accPassMsg"></div>
       </div>
 
-      <div class="switcher"><a onclick="closeAccount()">← Вернуться к расчёту</a></div>
+      <div class="switcher"><a onclick="closeAccount()" data-i18n="acc_back">← Вернуться к расчёту</a></div>
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<script src="i18n.js"></script>
 <script>
 /* ---------- starfield ---------- */
 (function(){
@@ -352,7 +355,7 @@ async function api(method, path, body){
   if(body!==undefined){opt.headers['Content-Type']='application/json';opt.body=JSON.stringify(body);}
   const r=await fetch('/api'+path, opt);
   let data=null; try{data=await r.json();}catch(e){}
-  if(!r.ok) throw new Error((data&&data.error)||('Ошибка сервера ('+r.status+')'));
+  if(!r.ok) throw new Error((data&&data.error)||t('err_server', r.status));
   return data;
 }
 
@@ -363,11 +366,11 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 /* ---------- auth ---------- */
 let mode='login', currentUser=null;
 let children=[], currentChildId=null;
-const AUTH_TEXT={
-  login:   ['Вход','Войдите, чтобы рассчитать режим и сохранять историю по дням','Войти'],
-  register:['Создать аккаунт','Зарегистрируйтесь, чтобы сохранять историю расчётов','Зарегистрироваться'],
-  forgot:  ['Сброс пароля','Укажите e-mail аккаунта — пришлём код для сброса','Отправить код'],
-  reset:   ['Новый пароль','Введите код из письма и задайте новый пароль','Сбросить пароль']
+const AUTH_KEYS={
+  login:   ['auth_login_title','auth_login_sub','auth_login_btn'],
+  register:['auth_reg_title','auth_reg_sub','auth_reg_btn'],
+  forgot:  ['auth_forgot_title','auth_forgot_sub','auth_forgot_btn'],
+  reset:   ['auth_reset_title','auth_reset_sub','auth_reset_btn']
 };
 function setMode(m){
   mode=m;
@@ -379,17 +382,17 @@ function setMode(m){
   show('confirmField', m==='register'||m==='reset');
   show('forgotLink', m==='login');
 
-  const t=AUTH_TEXT[m];
-  document.getElementById('authTitle').textContent=t[0];
-  document.getElementById('authSub').textContent=t[1];
-  document.getElementById('authBtn').textContent=t[2];
-  document.getElementById('passLabel').textContent=m==='reset'?'Новый пароль':'Пароль';
+  const k=AUTH_KEYS[m];
+  document.getElementById('authTitle').textContent=t(k[0]);
+  document.getElementById('authSub').textContent=t(k[1]);
+  document.getElementById('authBtn').textContent=t(k[2]);
+  document.getElementById('passLabel').textContent=t(m==='reset'?'field_new_password':'field_password');
   document.getElementById('loginPass').setAttribute('autocomplete', m==='login'?'current-password':'new-password');
 
   const sw=document.getElementById('switcher');
-  if(m==='login')        sw.innerHTML='Ещё нет аккаунта? <a onclick="setMode(\'register\')">Зарегистрироваться</a>';
-  else if(m==='register')sw.innerHTML='Уже есть аккаунт? <a onclick="setMode(\'login\')">Войти</a>';
-  else                   sw.innerHTML='Вспомнили пароль? <a onclick="setMode(\'login\')">Войти</a>';
+  if(m==='login')        sw.innerHTML=t('sw_no_account')+'<a onclick="setMode(\'register\')">'+t('sw_register')+'</a>';
+  else if(m==='register')sw.innerHTML=t('sw_have_account')+'<a onclick="setMode(\'login\')">'+t('sw_login')+'</a>';
+  else                   sw.innerHTML=t('sw_remembered')+'<a onclick="setMode(\'login\')">'+t('sw_login')+'</a>';
   setMsg('');
 }
 function setMsg(m,type){const e=document.getElementById('authMsg');e.textContent=m||'';e.className='msg '+(type||'');}
@@ -401,17 +404,17 @@ async function submitAuth(){
 
     const u=document.getElementById('loginUser').value.trim().toLowerCase();
     const p=document.getElementById('loginPass').value;
-    if(!u||!p){setMsg('Введите логин и пароль','err');return;}
-    if(u.length<3){setMsg('Логин — минимум 3 символа','err');return;}
+    if(!u||!p){setMsg(t('msg_enter_credentials'),'err');return;}
+    if(u.length<3){setMsg(t('msg_login_min'),'err');return;}
 
     if(mode==='register'){
       const email=document.getElementById('loginEmail').value.trim().toLowerCase();
       const p2=document.getElementById('loginPass2').value;
-      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg('Укажите корректный e-mail','err');return;}
-      if(p.length<4){setMsg('Пароль — минимум 4 символа','err');return;}
-      if(p!==p2){setMsg('Пароли не совпадают','err');return;}
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg(t('msg_email_invalid'),'err');return;}
+      if(p.length<4){setMsg(t('msg_pass_min'),'err');return;}
+      if(p!==p2){setMsg(t('msg_pass_mismatch'),'err');return;}
       const res=await api('POST','/register',{username:u,password:p,email});
-      setMsg('Аккаунт создан!','ok');
+      setMsg(t('msg_account_created'),'ok');
       await startSession(res.username);
     }else{
       const res=await api('POST','/login',{username:u,password:p});
@@ -422,10 +425,10 @@ async function submitAuth(){
 
 async function submitForgot(){
   const email=document.getElementById('loginEmail').value.trim().toLowerCase();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg('Укажите корректный e-mail','err');return;}
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg(t('msg_email_invalid'),'err');return;}
   await api('POST','/password/forgot',{email});
   setMode('reset');
-  setMsg('Если такой e-mail зарегистрирован, мы отправили на него код','ok');
+  setMsg(t('msg_reset_sent'),'ok');
 }
 
 async function submitReset(){
@@ -433,12 +436,12 @@ async function submitReset(){
   const code=document.getElementById('loginCode').value.trim();
   const p=document.getElementById('loginPass').value;
   const p2=document.getElementById('loginPass2').value;
-  if(!code){setMsg('Введите код из письма','err');return;}
-  if(p.length<4){setMsg('Пароль — минимум 4 символа','err');return;}
-  if(p!==p2){setMsg('Пароли не совпадают','err');return;}
+  if(!code){setMsg(t('msg_enter_code'),'err');return;}
+  if(p.length<4){setMsg(t('msg_pass_min'),'err');return;}
+  if(p!==p2){setMsg(t('msg_pass_mismatch'),'err');return;}
   await api('POST','/password/reset',{email,code,password:p});
   setMode('login');
-  setMsg('Пароль обновлён — войдите с новым паролем','ok');
+  setMsg(t('msg_pass_updated'),'ok');
 }
 
 async function startSession(u){
@@ -495,10 +498,10 @@ function ageFromBirth(iso){
   let months=(now.getFullYear()-b.getFullYear())*12+(now.getMonth()-b.getMonth());
   if(now.getDate()<b.getDate()) months--;
   if(months<0) return '';
-  if(months<1) return 'меньше месяца';
+  if(months<1) return t('age_less_month');
   const y=Math.floor(months/12), m=months%12, parts=[];
-  if(y>0) parts.push(y+' '+plural(y,'год','года','лет'));
-  if(m>0) parts.push(m+' '+plural(m,'месяц','месяца','месяцев'));
+  if(y>0) parts.push(y+' '+i18nYearWord(y));
+  if(m>0) parts.push(m+' '+i18nMonthWord(m));
   return parts.join(' ');
 }
 function childLabel(c){ const a=ageFromBirth(c.birthDate); return c.name+(a?' · '+a:''); }
@@ -556,8 +559,8 @@ function dmyToIso(str){
 async function submitFirstChild(){
   const name=document.getElementById('gateChildName').value.trim();
   const birth=dmyToIso(document.getElementById('gateChildBirth').value);
-  if(name.length<1){setMsg2('childGateMsg','Укажите имя ребёнка','err');return;}
-  if(birth==='INVALID'){setMsg2('childGateMsg','Дата рождения в формате дд/мм/гггг','err');return;}
+  if(name.length<1){setMsg2('childGateMsg',t('msg_name_required'),'err');return;}
+  if(birth==='INVALID'){setMsg2('childGateMsg',t('msg_birth_format'),'err');return;}
   try{
     const c=await api('POST','/children',{name,birthDate:birth});
     await loadChildren();
@@ -569,22 +572,22 @@ async function submitFirstChild(){
 /* Список детей на странице аккаунта. */
 function renderChildren(){
   const el=document.getElementById('accChildren');
-  if(!children.length){ el.innerHTML='<div class="acc-empty">Пока нет добавленных детей.</div>'; return; }
+  if(!children.length){ el.innerHTML='<div class="acc-empty">'+esc(t('acc_no_children'))+'</div>'; return; }
   el.innerHTML=children.map(c=>{
     const age=ageFromBirth(c.birthDate);
-    const info=c.birthDate?(fmtDate(c.birthDate)+(age?' · '+age:'')):'дата рождения не указана';
+    const info=c.birthDate?(fmtDate(c.birthDate)+(age?' · '+age:'')):t('acc_birth_not_set');
     return `
     <div class="child-row">
       <div class="child-info"><b>${esc(c.name)}</b><small>${esc(info)}</small></div>
-      <button class="hdel" onclick="deleteChild(${c.id})" title="Удалить ребёнка">✕</button>
+      <button class="hdel" onclick="deleteChild(${c.id})" title="${esc(t('acc_del_child_tip'))}">✕</button>
     </div>`;
   }).join('');
 }
 async function addChild(){
   const name=document.getElementById('newChildName').value.trim();
   const birth=dmyToIso(document.getElementById('newChildBirth').value);
-  if(name.length<1){setMsg2('accChildMsg','Укажите имя ребёнка','err');return;}
-  if(birth==='INVALID'){setMsg2('accChildMsg','Дата рождения в формате дд/мм/гггг','err');return;}
+  if(name.length<1){setMsg2('accChildMsg',t('msg_name_required'),'err');return;}
+  if(birth==='INVALID'){setMsg2('accChildMsg',t('msg_birth_format'),'err');return;}
   try{
     const c=await api('POST','/children',{name,birthDate:birth});
     document.getElementById('newChildName').value='';
@@ -592,11 +595,11 @@ async function addChild(){
     await loadChildren();
     if(!currentChildId){ currentChildId=String(c.id); localStorage.setItem('child:'+currentUser,currentChildId); }
     renderChildren(); populateChildSelect();
-    setMsg2('accChildMsg','Ребёнок добавлен','ok');
+    setMsg2('accChildMsg',t('msg_child_added'),'ok');
   }catch(e){ setMsg2('accChildMsg',e.message,'err'); }
 }
 async function deleteChild(id){
-  if(!confirm('Удалить ребёнка и всю его историю расчётов?')) return;
+  if(!confirm(t('acc_del_child_confirm'))) return;
   try{
     await api('DELETE','/children/'+id);
     await loadChildren();
@@ -606,7 +609,7 @@ async function deleteChild(id){
       else localStorage.removeItem('child:'+currentUser);
     }
     renderChildren(); populateChildSelect();
-    setMsg2('accChildMsg','Ребёнок удалён','ok');
+    setMsg2('accChildMsg',t('msg_child_deleted'),'ok');
   }catch(e){ setMsg2('accChildMsg',e.message,'err'); }
 }
 
@@ -635,7 +638,7 @@ async function openAccount(){
   try{
     const a=await api('GET','/account');
     document.getElementById('accUser').textContent=a.username||'—';
-    document.getElementById('accEmailView').textContent=a.email||'не указан';
+    document.getElementById('accEmailView').textContent=a.email||t('acc_email_not_set');
     document.getElementById('accCreated').textContent=a.createdAt?fmtAccDate(a.createdAt):'—';
     document.getElementById('accEmail').value=a.email||'';
   }catch(e){ setMsg2('accEmailMsg',e.message,'err'); }
@@ -661,11 +664,11 @@ function goHome(){
 
 async function saveEmail(){
   const email=document.getElementById('accEmail').value.trim().toLowerCase();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg2('accEmailMsg','Укажите корректный e-mail','err');return;}
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){setMsg2('accEmailMsg',t('msg_email_invalid'),'err');return;}
   try{
     const r=await api('POST','/account/email',{email});
     document.getElementById('accEmailView').textContent=r.email;
-    setMsg2('accEmailMsg','E-mail сохранён','ok');
+    setMsg2('accEmailMsg',t('msg_email_saved'),'ok');
   }catch(e){ setMsg2('accEmailMsg',e.message,'err'); }
 }
 
@@ -673,22 +676,22 @@ async function changePassword(){
   const cur=document.getElementById('accCurPass').value;
   const np=document.getElementById('accNewPass').value;
   const np2=document.getElementById('accNewPass2').value;
-  if(!cur){setMsg2('accPassMsg','Введите текущий пароль','err');return;}
-  if(np.length<4){setMsg2('accPassMsg','Пароль — минимум 4 символа','err');return;}
-  if(np!==np2){setMsg2('accPassMsg','Пароли не совпадают','err');return;}
+  if(!cur){setMsg2('accPassMsg',t('msg_enter_cur_pass'),'err');return;}
+  if(np.length<4){setMsg2('accPassMsg',t('msg_pass_min'),'err');return;}
+  if(np!==np2){setMsg2('accPassMsg',t('msg_pass_mismatch'),'err');return;}
   try{
     await api('POST','/account/password',{currentPassword:cur,newPassword:np});
     document.getElementById('accCurPass').value='';
     document.getElementById('accNewPass').value='';
     document.getElementById('accNewPass2').value='';
-    setMsg2('accPassMsg','Пароль изменён','ok');
+    setMsg2('accPassMsg',t('msg_pass_changed'),'ok');
   }catch(e){ setMsg2('accPassMsg',e.message,'err'); }
 }
 
 /* ---------- time math ---------- */
 const t2m=s=>{const[h,m]=s.split(':').map(Number);return h*60+m;};
 const m2t=m=>{if(!Number.isFinite(m))return '—';const v=((Math.round(m)%1440)+1440)%1440;return `${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;};
-const fh=m=>{if(!Number.isFinite(m))return '—';const h=Math.floor(m/60),mm=Math.round(m%60);return mm?`${h} ч ${mm} м`:`${h} ч`;};
+const fh=m=>{if(!Number.isFinite(m))return '—';const h=Math.floor(m/60),mm=Math.round(m%60);return mm?`${h} ${t('unit_hour')} ${mm} ${t('unit_minute')}`:`${h} ${t('unit_hour')}`;};
 
 /* ---------- core calculation ---------- */
 let last=null;
@@ -727,7 +730,7 @@ function syncAdvUI(){
   const t1=document.getElementById('advToggle'),t2=document.getElementById('advToggle2');
   if(t1) t1.checked=advEnabled;
   if(t2) t2.checked=advEnabled;
-  const st=document.getElementById('advState'); if(st) st.textContent=advEnabled?'включён':'выключен';
+  const st=document.getElementById('advState'); if(st) st.textContent=advEnabled?t('adv_state_on'):t('adv_state_off');
   const fw=document.getElementById('fw');
   if(fw){ fw.disabled=advEnabled; const f=fw.closest('.slider-field'); if(f) f.classList.toggle('locked',advEnabled); }
 }
@@ -825,12 +828,11 @@ function closeAdv(){
 function renderAdvFields(){
   const N=parseInt(document.getElementById('napCount').value);
   ensureAdvArrays(N);
-  const ord=['1-го','2-го','3-го','4-го','5-го'];
   let wh='';
   for(let i=0;i<=N;i++){
-    const label=i===0?'Бодрствование до 1-го сна'
-              :i===N?'Бодрствование после последнего сна (до ночи)'
-              :`Бодрствование между ${i}-м и ${i+1}-м снами`;
+    const label=i===0?t('adv_wake_first')
+              :i===N?t('adv_wake_last')
+              :t('adv_wake_between',i,i+1);
     wh+=`<div class="slider-field">
       <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">${label}</label><span class="val" id="awVal${i}">${fh(advWakes[i])}</span></div>
       <input type="range" id="aw${i}" min="30" max="480" step="5" value="${advWakes[i]}" oninput="advWakeInput(${i})">
@@ -840,7 +842,7 @@ function renderAdvFields(){
   let nh='';
   for(let i=0;i<N;i++){
     nh+=`<div class="slider-field">
-      <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">Длительность ${ord[i]||(i+1+'-го')} сна</label><span class="val" id="adVal${i}">${fh(advDurs[i])}</span></div>
+      <div class="slider-top"><label style="color:var(--muted);font-size:12.5px">${t('adv_nap_dur',i+1)}</label><span class="val" id="adVal${i}">${fh(advDurs[i])}</span></div>
       <input type="range" id="ad${i}" min="20" max="240" step="5" value="${advDurs[i]}" oninput="advDurInput(${i})">
     </div>`;
   }
@@ -859,7 +861,7 @@ function advDurInput(i){
 function saveAdv(){
   saveCfg();
   if(advEnabled) calc();
-  setMsg2('advMsg','Настройки сохранены','ok');
+  setMsg2('advMsg',t('adv_saved'),'ok');
 }
 
 /* Показ/скрытие блока параметров расчёта по кнопке. */
@@ -882,9 +884,9 @@ function buildNaps(){
   for(let i=0;i<n;i++){
     const v=prev[i]||['',''];
     html+=`<div class="nap-row" data-i="${i}">
-      <span class="nap-badge">Сон ${i+1}</span>
-      <div class="field"><label>Засыпание</label><input type="time" id="ns${i}" value="${v[0]}" lang="ru-RU" oninput="calc()"></div>
-      <div class="field"><label>Пробуждение</label><input type="time" id="ne${i}" value="${v[1]}" lang="ru-RU" oninput="calc()"></div>
+      <span class="nap-badge">${t('nap_badge',i+1)}</span>
+      <div class="field"><label>${t('nap_fall_asleep')}</label><input type="time" id="ns${i}" value="${v[0]}" lang="ru-RU" oninput="calc()"></div>
+      <div class="field"><label>${t('nap_wake')}</label><input type="time" id="ne${i}" value="${v[1]}" lang="ru-RU" oninput="calc()"></div>
     </div>`;
   }
   document.getElementById('napRows').innerHTML=html;
@@ -897,7 +899,7 @@ function getNaps(){
   });
   return out;
 }
-const napWord=n=>n===1?'дневной сон':(n>=2&&n<=4?'дневных сна':'дневных снов');
+function napWord(n){ return i18nNapWord(n); }
 
 function calc(){
   const whM=parseInt(document.getElementById('wh').value);
@@ -907,12 +909,12 @@ function calc(){
   document.getElementById('fwVal').textContent=fh(fwM);
 
   const banner=document.getElementById('errBanner');
-  function err(t){banner.style.display='flex';document.getElementById('errText').textContent='⚠ '+t;document.getElementById('results').style.opacity='.35';last=null;}
+  function err(msg){banner.style.display='flex';document.getElementById('errText').textContent='⚠ '+msg;document.getElementById('results').style.opacity='.35';last=null;}
   function ok(){banner.style.display='none';document.getElementById('results').style.opacity='1';}
 
   // Единственное обязательное поле — фактический утренний подъём.
   const mwStr=document.getElementById('mw').value;
-  if(!mwStr){ err('Укажите фактическое время утреннего подъёма'); drawTimeline(null); return; }
+  if(!mwStr){ err(t('err_morning_wake')); drawTimeline(null); return; }
   const mw=t2m(mwStr);
 
   const naps=getNaps();
@@ -926,10 +928,10 @@ function calc(){
   // «Достроенные» по умолчанию дни в историю не сохраняются (см. last ниже).
   const napsComplete=naps.every(n=>Number.isFinite(n.s)&&Number.isFinite(n.e));
   if(napsComplete){
-    if(naps[0].s<=mw){err('Первый сон должен начинаться позже утреннего подъёма');drawTimeline(null);return;}
+    if(naps[0].s<=mw){err(t('err_first_nap'));drawTimeline(null);return;}
     for(let i=0;i<naps.length;i++){
-      if(naps[i].e<=naps[i].s){err(`Пробуждение от сна ${i+1} должно быть позже засыпания`);drawTimeline(null);return;}
-      if(i>0&&naps[i].s<naps[i-1].e){err(`Сон ${i+1} начинается раньше пробуждения от сна ${i}`);drawTimeline(null);return;}
+      if(naps[i].e<=naps[i].s){err(t('err_nap_wake',i+1));drawTimeline(null);return;}
+      if(i>0&&naps[i].s<naps[i-1].e){err(t('err_nap_order',i+1,i));drawTimeline(null);return;}
     }
   }
 
@@ -947,18 +949,18 @@ function calc(){
   if(advEnabled){
     // Каждое окно бодрствования и каждый сон — из расширенной шкалы (N+1 окон, N снов).
     recFirst=mw+advWakes[0];
-    let t=recFirst;
-    for(let i=0;i<N;i++){ recNaps.push({s:t,e:t+durs[i]}); t=recNaps[i].e+advWakes[i+1]; }
-    recNight=t;
+    let cursor=recFirst;
+    for(let i=0;i<N;i++){ recNaps.push({s:cursor,e:cursor+durs[i]}); cursor=recNaps[i].e+advWakes[i+1]; }
+    recNight=cursor;
   }else{
     // Текущая логика: взвешенная связка ползунков (всего N+1 окон бодрствования).
     const DOM=.75, SEC=.25;
     recFirst=mw+(DOM*fwM+SEC*whM/(N+1));               // первый сон: окно бодрствования
     recNight=mw+napTotal+(DOM*whM+SEC*(N+1)*fwM);      // ночь: дневной сон + бюджет бодрствования
-    for(let i=0,t=recFirst;i<N;i++){recNaps.push({s:t,e:t+durs[i]});t=t+durs[i]+fwM;}
+    for(let i=0,cursor=recFirst;i<N;i++){recNaps.push({s:cursor,e:cursor+durs[i]});cursor=cursor+durs[i]+fwM;}
   }
   if(recNight>=mw+1440 || recNaps[N-1].e>=recNight){
-    err('Расчёт выходит за пределы суток (24 ч). Уменьшите окно бодрствования, длительность или число снов.');
+    err(t('err_beyond'));
     drawTimeline(null);return;
   }
 
@@ -980,15 +982,14 @@ function calc(){
   document.getElementById('nightTime').textContent=m2t(recNight);
 
   const napSvg='<svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="26" r="13" fill="#8fe3c6" opacity=".25"/><path d="M18 24h12M18 28h8" stroke="#bdf0db" stroke-width="2.5" stroke-linecap="round"/></svg>';
-  const ord=['первый','второй','третий','четвёртый'];
   document.getElementById('napCards').innerHTML=recNaps.map((rn,i)=>{
     const hasAct=Number.isFinite(naps[i].s);
     let meta;
-    if(!hasAct) meta=`Рекоменд.: ${m2t(rn.s)}`;
+    if(!hasAct) meta=t('rec_prefix',m2t(rn.s));
     else{ const fd=naps[i].s-rn.s;
-      if(fd===0) meta=`Факт совпадает с рекомендацией (${m2t(naps[i].s)})`;
-      else meta=`Рекоменд.: ${m2t(rn.s)} · факт ${fd>0?'позже на ':'раньше на '}${fh(Math.abs(fd))}`; }
-    const label=N>1?`☀️ Засыпание на ${ord[i]} дневной сон`:'☀️ Засыпание на дневной сон';
+      if(fd===0) meta=t('fact_matches',m2t(naps[i].s));
+      else meta=t('rec_with_diff',m2t(rn.s),(fd>0?t('diff_later',fh(Math.abs(fd))):t('diff_earlier',fh(Math.abs(fd))))); }
+    const label=N>1?t('nap_label_multi',i18nOrdNom(i)):t('nap_label_single');
     // Крупное значение — фактическое засыпание, если указано; иначе рекомендованное.
     const shown=hasAct?naps[i].s:rn.s;
     return `<div class="rcard nap">${napSvg}<div class="rlabel">${label}</div><div class="rtime">${m2t(shown)}</div><div class="rmeta">${meta}</div></div>`;
@@ -996,7 +997,7 @@ function calc(){
 
   const est=!napsComplete;
   document.getElementById('nightMeta').textContent =
-    `${N} ${napWord(N)} · Σ сна ${est?'≈':''}${fh(napTotal)} · вечернее окно ${fh(recNight-lastEnd)}`;
+    `${N} ${napWord(N)} · ${t('sum_sleep')} ${est?'≈':''}${fh(napTotal)} · ${t('evening_window')} ${fh(recNight-lastEnd)}`;
 
   const actCard=document.getElementById('actCard');
   if(actWakeM!=null){
@@ -1004,11 +1005,11 @@ function calc(){
     document.getElementById('actWake').textContent=fh(actWakeM);
     const dlt=actWakeM-whM;
     document.getElementById('actMeta').textContent=
-      `Факт. уход в ночь ${anStr} · ${dlt===0?'точно по плану':(dlt>0?'на '+fh(dlt)+' больше плана':'на '+fh(-dlt)+' меньше плана')}`;
+      t('actual_night_prefix',anStr)+(dlt===0?t('on_plan'):(dlt>0?t('more_plan',fh(dlt)):t('less_plan',fh(-dlt))));
   }else{
     actCard.classList.add('empty');
     document.getElementById('actWake').textContent='—';
-    document.getElementById('actMeta').textContent=(an!=null)?'Заполните время снов для расчёта':'Укажите фактический уход в ночь';
+    document.getElementById('actMeta').textContent=(an!=null)?t('fill_naps'):t('specify_night');
   }
 
   document.getElementById('stMor').textContent=fh(firstWindowM);
@@ -1030,7 +1031,7 @@ function calc(){
 /* ---------- timeline (24h horizontal, N naps) ---------- */
 function drawTimeline(d){
   const el=document.getElementById('timeline');
-  if(!d){el.innerHTML='<p style="color:var(--faint);font-size:13px;padding:14px 0">Исправьте параметры, чтобы увидеть распорядок</p>';return;}
+  if(!d){el.innerHTML='<p style="color:var(--faint);font-size:13px;padding:14px 0">'+t('tl_fix_params')+'</p>';return;}
   const W=1000,BH=60,baseY=14,labelY=BH+baseY+24,total=1440;
   const px=t=>((((t%1440)+1440)%1440)/total)*W;
 
@@ -1054,12 +1055,12 @@ function drawTimeline(d){
     ticks+=`<line x1="${x}" y1="${baseY+BH}" x2="${x}" y2="${baseY+BH+6}" stroke="rgba(184,167,240,.4)" stroke-width="1"/>`;
     ticks+=`<text x="${x}" y="${labelY+2}" fill="#a99fce" font-size="13" font-family="Outfit" text-anchor="middle">${String(h%24).padStart(2,'0')}:00</text>`;}
 
-  const M=[{t:d.mw,c:'#ffd98e',lab:'подъём '+m2t(d.mw),up:1}];
-  d.naps.forEach((n,i)=>M.push({t:n.s,c:'#8fe3c6',lab:'сон '+(i+1)+' '+m2t(n.s),up:0}));
-  M.push({t:d.nightAbs,c:'#d8ccff',lab:(d.anGiven?'факт. ночь ':'ночь ')+m2t(d.nightAbs),up:0,big:1});
-  if(Math.abs(d.recFirst-d.naps[0].s)>=5)M.push({t:d.recFirst,c:'#6c6396',lab:'реком. '+m2t(d.recFirst),up:1,faint:1});
+  const M=[{t:d.mw,c:'#ffd98e',lab:t('tl_wake',m2t(d.mw)),up:1}];
+  d.naps.forEach((n,i)=>M.push({t:n.s,c:'#8fe3c6',lab:t('tl_nap',i+1,m2t(n.s)),up:0}));
+  M.push({t:d.nightAbs,c:'#d8ccff',lab:(d.anGiven?t('tl_act_night',m2t(d.nightAbs)):t('tl_night',m2t(d.nightAbs))),up:0,big:1});
+  if(Math.abs(d.recFirst-d.naps[0].s)>=5)M.push({t:d.recFirst,c:'#6c6396',lab:t('tl_rec',m2t(d.recFirst)),up:1,faint:1});
   if(d.anGiven&&Math.abs(((d.recNight%1440)+1440)%1440-((d.nightAbs%1440)+1440)%1440)>=5)
-    M.push({t:d.recNight,c:'#6c6396',lab:'реком. ночь '+m2t(d.recNight),up:1,faint:1});
+    M.push({t:d.recNight,c:'#6c6396',lab:t('tl_rec_night',m2t(d.recNight)),up:1,faint:1});
 
   let marks='';
   M.forEach(m=>{const x=px(m.t);const r=m.big?6:4;
@@ -1093,19 +1094,19 @@ function clearFields(){
   document.querySelectorAll('#napRows input').forEach(inp=>inp.value='');
   calc();
   saveCfg();                 // сброс к 1 сну тоже запоминаем
-  toast('Поля очищены');
+  toast(t('msg_fields_cleared'));
 }
 
 /* ---------- history ---------- */
 async function saveCalc(){
-  if(!last){toast('Сначала исправьте параметры');return;}
-  if(!currentChildId){toast('Сначала добавьте ребёнка');return;}
+  if(!last){toast(t('toast_fix_params'));return;}
+  if(!currentChildId){toast(t('toast_add_child'));return;}
   const date=dmyToIso(document.getElementById('histDate').value);
-  if(!date){toast('Выберите дату');return;}
-  if(date==='INVALID'){toast('Дата в формате дд/мм/гггг');return;}
+  if(!date){toast(t('toast_choose_date'));return;}
+  if(date==='INVALID'){toast(t('toast_date_format'));return;}
   try{
     const res=await api('POST','/history',Object.assign({date,childId:Number(currentChildId)},last));
-    toast(res.updated?'Запись за '+fmtDate(date)+' обновлена':'Сохранено в историю');
+    toast(res.updated?t('toast_record_updated',fmtDate(date)):t('toast_saved'));
     await renderHistory();
   }catch(e){ toast(e.message); }
 }
@@ -1136,20 +1137,20 @@ function setHistPeriod(d){
 }
 function renderMetrics(){
   const s=periodStats(histRows,histPeriod);
-  const sub=n=>n?'по '+n+' дн.':'нет записей';
+  const sub=n=>n?t('metric_sub_days',n):t('metric_no_records');
   document.getElementById('histMetrics').innerHTML=`
     <div class="hmetric">
-      <div class="hm-lbl">🌙 Средний ночной сон</div>
+      <div class="hm-lbl">${t('metric_night')}</div>
       <div class="hm-val">${s.nightAvg!=null?fh(s.nightAvg):'—'}</div>
       <div class="hm-sub">${sub(s.nightN)}</div>
     </div>
     <div class="hmetric">
-      <div class="hm-lbl">😴 Средний дневной сон</div>
+      <div class="hm-lbl">${t('metric_day')}</div>
       <div class="hm-val">${s.dayAvg!=null?fh(s.dayAvg):'—'}</div>
       <div class="hm-sub">${sub(s.dayN)}</div>
     </div>
     <div class="hmetric">
-      <div class="hm-lbl">☀️ Среднее бодрствование</div>
+      <div class="hm-lbl">${t('metric_wake')}</div>
       <div class="hm-val">${s.wakeAvg!=null?fh(s.wakeAvg):'—'}</div>
       <div class="hm-sub">${sub(s.wakeN)}</div>
     </div>`;
@@ -1160,8 +1161,7 @@ async function renderHistory(){
   histRows=rows;
   histPageList=0;            // после обновления списка — на первую страницу (свежие записи)
   renderMetrics();
-  document.getElementById('histCap').textContent =
-    'Ночной сон — по фактической длительности; бодрствование — факт, где указан уход в ночь, иначе плановое. Записи старше 90 дней удаляются автоматически.';
+  document.getElementById('histCap').textContent = t('hist_cap');
   renderHistList();
 }
 /* Постраничный вывод списка: размер страницы = выбранному периоду (7 или 30). */
@@ -1170,7 +1170,7 @@ function renderHistList(){
   const pager=document.getElementById('histPager');
   const rows=histRows;
   if(!rows.length){
-    el.innerHTML='<div class="hist-empty">Пока нет сохранённых дней.<br>Рассчитайте режим и нажмите «Сохранить в историю».</div>';
+    el.innerHTML='<div class="hist-empty">'+t('hist_empty')+'</div>';
     pager.innerHTML='';
     return;
   }
@@ -1181,20 +1181,20 @@ function renderHistList(){
   const slice=rows.slice(start,start+size);
   el.innerHTML=slice.map(h=>`
     <div class="hitem fade" onclick="loadRec('${h.date}')">
-      <div class="hdate">${fmtDate(h.date)}<small>${h.nap_count} ${napWord(h.nap_count)} · план ${fh(h.wh*60)}</small></div>
+      <div class="hdate">${fmtDate(h.date)}<small>${h.nap_count} ${napWord(h.nap_count)} · ${t('hist_plan')} ${fh(h.wh*60)}</small></div>
       <div class="htimes">
-        <div class="ht">просыпание<b>${h.mw}</b></div>
-        <div class="ht">реком. ночь<b>${h.rec_night}</b></div>
-        <div class="ht">факт. ночь<b>${h.actual_night||'—'}</b></div>
-        <div class="ht">факт. бодрст.<b>${h.actual_wake_m!=null?fh(h.actual_wake_m):'—'}</b></div>
+        <div class="ht">${t('col_wake')}<b>${h.mw}</b></div>
+        <div class="ht">${t('col_rec_night')}<b>${h.rec_night}</b></div>
+        <div class="ht">${t('col_act_night')}<b>${h.actual_night||'—'}</b></div>
+        <div class="ht">${t('col_act_wake')}<b>${h.actual_wake_m!=null?fh(h.actual_wake_m):'—'}</b></div>
       </div>
-      <button class="hdel" onclick="event.stopPropagation();delRec('${h.date}')" title="Удалить">✕</button>
+      <button class="hdel" onclick="event.stopPropagation();delRec('${h.date}')" title="${t('hist_delete')}">✕</button>
     </div>`).join('');
   if(pages>1){
     pager.innerHTML=
-      `<button class="hpage-btn" ${histPageList===0?'disabled':''} onclick="histGoPage(${histPageList-1})" aria-label="Предыдущая страница">←</button>`+
+      `<button class="hpage-btn" ${histPageList===0?'disabled':''} onclick="histGoPage(${histPageList-1})" aria-label="${t('pager_prev')}">←</button>`+
       `<span class="hpage-info">${histPageList+1} / ${pages}</span>`+
-      `<button class="hpage-btn" ${histPageList>=pages-1?'disabled':''} onclick="histGoPage(${histPageList+1})" aria-label="Следующая страница">→</button>`;
+      `<button class="hpage-btn" ${histPageList>=pages-1?'disabled':''} onclick="histGoPage(${histPageList+1})" aria-label="${t('pager_next')}">→</button>`;
   }else{
     pager.innerHTML='';
   }
@@ -1215,27 +1215,54 @@ async function loadRec(date){
   document.getElementById('histDate').value=fmtDate(h.date);
   calc();
   window.scrollTo({top:0,behavior:'smooth'});
-  toast('Загружен расчёт за '+fmtDate(date));
+  toast(t('toast_loaded',fmtDate(date)));
 }
 /* Загрузить в форму самую свежую сохранённую запись текущего ребёнка. */
 async function loadLast(){
-  if(!currentChildId){ toast('Сначала добавьте ребёнка'); return; }
+  if(!currentChildId){ toast(t('toast_add_child')); return; }
   let rows=[];
   try{ rows=await api('GET','/history'+childQuery()); }catch(e){ toast(e.message); return; }
-  if(!rows.length){ toast('Нет сохранённых данных'); return; }
+  if(!rows.length){ toast(t('toast_no_saved')); return; }
   // даты в формате ISO yyyy-mm-dd сравниваются лексикографически — берём максимум.
   const latest=rows.reduce((a,b)=>b.date>a.date?b:a);
   loadRec(latest.date);
 }
 async function delRec(date){
-  try{ await api('DELETE','/history/'+encodeURIComponent(date)+childQuery()); toast('Запись удалена'); }
+  try{ await api('DELETE','/history/'+encodeURIComponent(date)+childQuery()); toast(t('toast_record_deleted')); }
   catch(e){ toast(e.message); }
   await renderHistory();
 }
 function fmtDate(d){const[y,m,day]=d.split('-');return `${day}/${m}/${y}`;}
 
+/* Подставить переводы в варианты количества снов («1 дневной сон» …). */
+function relabelNapOptions(){
+  document.querySelectorAll('#napCount option').forEach(function(o){
+    var n=parseInt(o.value); o.textContent=n+' '+napWord(n);
+  });
+}
+
+/* Перерисовать динамические части интерфейса после смены языка.
+   applyI18n() уже обновил статическую разметку (data-i18n*). */
+function onLangChange(){
+  relabelNapOptions();
+  setMode(mode);                                   // тексты экрана авторизации
+  if(currentUser){
+    buildNaps();                                   // подписи «Сон N / Засыпание / Пробуждение»
+    calc();                                        // карточки, метрики результата, таймлайн
+    renderChildren();
+    populateChildSelect();
+    syncAdvUI();
+    if(document.getElementById('advStage').style.display!=='none') renderAdvFields();
+    if(document.getElementById('app').style.display!=='none') renderHistory();
+  }
+}
+
 /* ---------- boot: restore session via API ---------- */
 (async function(){
+  buildLangSelects();
+  applyI18n();
+  relabelNapOptions();
+  setMode('login');
   try{
     const me=await api('GET','/me');
     if(me && me.username) await startSession(me.username);

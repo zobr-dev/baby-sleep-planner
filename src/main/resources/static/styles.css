@@ -135,6 +135,14 @@ html{scrollbar-color:rgba(184,167,240,.35) transparent;scrollbar-width:thin}
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b7b0d6' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center}
 .child-select:hover{border-color:var(--stroke-2)}
+/* ---------- language selector ---------- */
+.lang-select{background:rgba(255,255,255,.06);border:1px solid var(--stroke);color:var(--ink);
+  font-family:'Outfit',sans-serif;font-size:13px;padding:6px 28px 6px 12px;border-radius:10px;cursor:pointer;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b7b0d6' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center}
+.lang-select:hover{border-color:var(--stroke-2)}
+.lang-row{display:flex;justify-content:flex-end;margin-bottom:6px}
 .child-row{display:flex;justify-content:space-between;align-items:center;gap:12px;
   padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,.035);
   border:1px solid var(--stroke);border-radius:12px}
@@ -162,6 +170,7 @@ html{scrollbar-color:rgba(184,167,240,.35) transparent;scrollbar-width:thin}
   /* приветствие слева (жмётся с многоточием), кнопки справа */
   .who>span{order:1;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .who .btn-ghost{order:2;padding:8px 14px;font-size:13px}
+  .who .lang-select{order:2;padding:8px 28px 8px 12px;font-size:13px}
   /* выпадающий список — отдельной строкой во всю ширину, не вылезает за экран */
   .child-select{order:3;flex:1 1 100%;max-width:none}
 }
