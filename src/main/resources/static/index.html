@@ -457,13 +457,17 @@ async function startSession(u){
   enterApp();
 }
 /* Показ основного приложения для выбранного ребёнка. */
-function enterApp(){
+async function enterApp(){
   document.getElementById('childGate').style.display='none';
   document.getElementById('app').style.display='block';
-  const d=new Date();document.getElementById('histDate').value=fmtDate(d.toISOString().slice(0,10));
+  const todayIso=new Date().toISOString().slice(0,10);
+  document.getElementById('histDate').value=fmtDate(todayIso);
   populateChildSelect();
   loadCfg();
-  renderHistory();
+  await renderHistory();
+  // При открытии планировщика подгружаем запись за текущий день, если она есть;
+  // иначе остаётся пустая форма с уже выставленной сегодняшней датой.
+  if(histRows.some(h=>h.date===todayIso)) loadRec(todayIso,{silent:true});
 }
 async function logout(){
   try{ await api('POST','/logout'); }catch(e){}
@@ -1204,7 +1208,8 @@ function renderHistList(){
   }
 }
 function histGoPage(p){ histPageList=p; renderHistList(); }
-async function loadRec(date){
+async function loadRec(date,opts){
+  const silent=!!(opts&&opts.silent);
   let rows=[];
   try{ rows=await api('GET','/history'+childQuery()); }catch(e){ return; }
   const h=rows.find(x=>x.date===date); if(!h)return;
@@ -1218,8 +1223,10 @@ async function loadRec(date){
   document.getElementById('an').value=h.actual_night||'';
   document.getElementById('histDate').value=fmtDate(h.date);
   calc();
-  window.scrollTo({top:0,behavior:'smooth'});
-  toast(t('toast_loaded',fmtDate(date)));
+  if(!silent){
+    window.scrollTo({top:0,behavior:'smooth'});
+    toast(t('toast_loaded',fmtDate(date)));
+  }
 }
 /* Загрузить в форму самую свежую сохранённую запись текущего ребёнка. */
 async function loadLast(){
