@@ -267,6 +267,10 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
 .rcard .rlabel{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--muted);margin-bottom:8px}
 .rcard .rtime{font-family:'Fraunces',serif;font-weight:500;font-size:52px;line-height:.95;letter-spacing:-1px;text-shadow:0 4px 24px rgba(216,204,255,.25)}
 .rcard.nap .rtime{color:#bdf0db}.rcard.night .rtime{color:var(--lav-soft)}
+/* Цвет крупной цифры по факту/отклонению: белый — факта нет, зелёный — <30 м, жёлтый — ≥30 м. */
+.rcard .rtime.dev-none{color:#fff}
+.rcard .rtime.dev-ok{color:var(--mint)}
+.rcard .rtime.dev-warn{color:var(--gold)}
 .rcard .rmeta{font-size:13px;color:var(--muted);margin-top:9px}
 .rcard .ricon{position:absolute;right:18px;top:18px;width:42px;height:42px;opacity:.85}
 

@@ -195,7 +195,7 @@
           <div id="napCards"></div>
           <div class="rcard night">
             <svg class="ricon" viewBox="0 0 48 48" fill="none"><path d="M30 12a15 15 0 1 0 7 23 12 12 0 1 1-7-23Z" fill="#d8ccff"/></svg>
-            <div class="rlabel" data-i18n="rec_night_label">🌙 Рекомендуемое засыпание в ночь</div>
+            <div class="rlabel" data-i18n="rec_night_label">🌙 Засыпание в ночь</div>
             <div class="rtime" id="nightTime">21:00</div>
             <div class="rmeta" id="nightMeta"></div>
           </div>
@@ -203,7 +203,6 @@
             <svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="14" fill="none" stroke="#ffd98e" stroke-width="2.5" opacity=".7"/><path d="M24 16v8l5 3" stroke="#ffd98e" stroke-width="2.5" stroke-linecap="round"/></svg>
             <div class="rlabel" data-i18n="actual_wake_label">⏱️ Фактическое общее бодрствование</div>
             <div class="rtime" id="actWake">—</div>
-            <div class="rmeta" id="actMeta" data-i18n="specify_night">Укажите фактический уход в ночь</div>
           </div>
 
           <div class="stats">
@@ -693,6 +692,15 @@ const t2m=s=>{const[h,m]=s.split(':').map(Number);return h*60+m;};
 const m2t=m=>{if(!Number.isFinite(m))return '—';const v=((Math.round(m)%1440)+1440)%1440;return `${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;};
 const fh=m=>{if(!Number.isFinite(m))return '—';const h=Math.floor(m/60),mm=Math.round(m%60);return mm?`${h} ${t('unit_hour')} ${mm} ${t('unit_minute')}`:`${h} ${t('unit_hour')}`;};
 
+/* Цвет крупной цифры засыпания: белый — факта нет, зелёный — отклонение <30 м, жёлтый — ≥30 м. */
+const devClass=(hasAct,dev)=>!hasAct?'dev-none':(Math.abs(dev)<30?'dev-ok':'dev-warn');
+/* Подпись «Рекоменд.: …, факт позже/раньше на …» — единая для дневных снов и ночи. */
+const sleepMeta=(hasAct,recM,dev)=>{
+  if(!hasAct) return t('rec_prefix',m2t(recM));
+  if(dev===0) return t('fact_matches',m2t(recM));
+  return t('rec_with_diff',m2t(recM),dev>0?t('diff_later',fh(Math.abs(dev))):t('diff_earlier',fh(Math.abs(dev))));
+};
+
 /* ---------- core calculation ---------- */
 let last=null;
 
@@ -979,37 +987,36 @@ function calc(){
   let actWakeM=null;
   if(an!=null && napsComplete){ let anAbs=an; if(anAbs<=lastEnd) anAbs+=1440; actWakeM=(anAbs-mw)-napTotal; }
 
-  document.getElementById('nightTime').textContent=m2t(recNight);
+  // Ночь: крупно — факт ухода в ночь, если задан, иначе рекомендация; цвет — по отклонению.
+  const nightHasAct=an!=null;
+  const recNightMod=((recNight%1440)+1440)%1440;
+  let nightDev=nightHasAct?(an-recNightMod):0;
+  if(nightDev>720) nightDev-=1440; else if(nightDev<-720) nightDev+=1440;
+  const nightEl=document.getElementById('nightTime');
+  nightEl.textContent=m2t(nightHasAct?an:recNightMod);
+  nightEl.className='rtime '+devClass(nightHasAct,nightDev);
 
   const napSvg='<svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="26" r="13" fill="#8fe3c6" opacity=".25"/><path d="M18 24h12M18 28h8" stroke="#bdf0db" stroke-width="2.5" stroke-linecap="round"/></svg>';
   document.getElementById('napCards').innerHTML=recNaps.map((rn,i)=>{
     const hasAct=Number.isFinite(naps[i].s);
-    let meta;
-    if(!hasAct) meta=t('rec_prefix',m2t(rn.s));
-    else{ const fd=naps[i].s-rn.s;
-      if(fd===0) meta=t('fact_matches',m2t(naps[i].s));
-      else meta=t('rec_with_diff',m2t(rn.s),(fd>0?t('diff_later',fh(Math.abs(fd))):t('diff_earlier',fh(Math.abs(fd))))); }
-    const label=N>1?t('nap_label_multi',i18nOrdNom(i)):t('nap_label_single');
+    const fd=hasAct?(naps[i].s-rn.s):0;
+    const meta=sleepMeta(hasAct,rn.s,fd);
+    const label=t('nap_label_multi',i+1);
     // Крупное значение — фактическое засыпание, если указано; иначе рекомендованное.
     const shown=hasAct?naps[i].s:rn.s;
-    return `<div class="rcard nap">${napSvg}<div class="rlabel">${label}</div><div class="rtime">${m2t(shown)}</div><div class="rmeta">${meta}</div></div>`;
+    return `<div class="rcard nap">${napSvg}<div class="rlabel">${label}</div><div class="rtime ${devClass(hasAct,fd)}">${m2t(shown)}</div><div class="rmeta">${meta}</div></div>`;
   }).join('');
 
   const est=!napsComplete;
-  document.getElementById('nightMeta').textContent =
-    `${N} ${napWord(N)} · ${t('sum_sleep')} ${est?'≈':''}${fh(napTotal)} · ${t('evening_window')} ${fh(recNight-lastEnd)}`;
+  document.getElementById('nightMeta').textContent=sleepMeta(nightHasAct,recNightMod,nightDev);
 
   const actCard=document.getElementById('actCard');
   if(actWakeM!=null){
     actCard.classList.remove('empty');
     document.getElementById('actWake').textContent=fh(actWakeM);
-    const dlt=actWakeM-whM;
-    document.getElementById('actMeta').textContent=
-      t('actual_night_prefix',anStr)+(dlt===0?t('on_plan'):(dlt>0?t('more_plan',fh(dlt)):t('less_plan',fh(-dlt))));
   }else{
     actCard.classList.add('empty');
     document.getElementById('actWake').textContent='—';
-    document.getElementById('actMeta').textContent=(an!=null)?t('fill_naps'):t('specify_night');
   }
 
   document.getElementById('stMor').textContent=fh(firstWindowM);
