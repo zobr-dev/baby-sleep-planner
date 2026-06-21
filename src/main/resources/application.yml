@@ -37,6 +37,10 @@ spring:
     properties:
       mail.smtp.auth: "true"
       mail.smtp.starttls.enable: "true"
+      # Явный конверт-отправитель (SMTP MAIL FROM / Return-Path). Без него Angus Mail
+      # подставляет системный root@<имя-контейнера>, и релей отклоняет письмо
+      # («Sender address rejected: Domain not found»). Берём тот же адрес, что MAIL_FROM.
+      mail.smtp.from: ${MAIL_FROM:no-reply@baby-sleep-planner.ru}
 
 app:
   mail:
