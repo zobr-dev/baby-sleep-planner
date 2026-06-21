@@ -203,6 +203,7 @@
             <svg class="ricon" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="14" fill="none" stroke="#ffd98e" stroke-width="2.5" opacity=".7"/><path d="M24 16v8l5 3" stroke="#ffd98e" stroke-width="2.5" stroke-linecap="round"/></svg>
             <div class="rlabel" data-i18n="actual_wake_label">⏱️ Фактическое общее бодрствование</div>
             <div class="rtime" id="actWake">—</div>
+            <div class="rmeta" id="actWakeMeta"></div>
           </div>
 
           <div class="stats">
@@ -704,6 +705,12 @@ const sleepMeta=(hasAct,recM,dev)=>{
   if(dev===0) return t('fact_matches',m2t(recM));
   return t('rec_with_diff',m2t(recM),dev>0?t('diff_later',fh(Math.abs(dev))):t('diff_earlier',fh(Math.abs(dev))));
 };
+/* Подпись для блока общего бодрствования: рекомендуемая длительность и «факт больше/меньше на …». */
+const wakeMeta=(hasAct,recM,dev)=>{
+  if(!hasAct) return t('rec_prefix',fh(recM));
+  if(dev===0) return t('fact_matches',fh(recM));
+  return t('rec_with_diff',fh(recM),dev>0?t('diff_more',fh(Math.abs(dev))):t('diff_less',fh(Math.abs(dev))));
+};
 
 /* ---------- core calculation ---------- */
 let last=null;
@@ -1014,14 +1021,22 @@ function calc(){
   const est=!napsComplete;
   document.getElementById('nightMeta').textContent=sleepMeta(nightHasAct,recNightMod,nightDev);
 
+  // Общее бодрствование: крупно — факт, если есть; цвет и подпись — по отклонению
+  // от рекомендованной длительности бодрствования из расписания (recNight − подъём − дневной сон).
+  const recWakeM=recNight-mw-napTotal;
+  const wakeHasAct=actWakeM!=null;
+  const wakeDev=wakeHasAct?(actWakeM-recWakeM):0;
   const actCard=document.getElementById('actCard');
-  if(actWakeM!=null){
+  const actWakeEl=document.getElementById('actWake');
+  if(wakeHasAct){
     actCard.classList.remove('empty');
-    document.getElementById('actWake').textContent=fh(actWakeM);
+    actWakeEl.textContent=fh(actWakeM);
   }else{
     actCard.classList.add('empty');
-    document.getElementById('actWake').textContent='—';
+    actWakeEl.textContent='—';
   }
+  actWakeEl.className='rtime '+devClass(wakeHasAct,wakeDev);
+  document.getElementById('actWakeMeta').textContent=wakeMeta(wakeHasAct,recWakeM,wakeDev);
 
   document.getElementById('stMor').textContent=fh(firstWindowM);
   document.getElementById('stNap').textContent=(est?'≈':'')+fh(napTotal);
